@@ -21,4 +21,4 @@ It is the single place for example PDFs and their manifest so no one has to gues
 - **Reproducibility:** pipeline/scripts can read one manifest (CSV) for the whole batch.
 - **Traceability:** each file has a source and licence in the CSV.
 - **Speed:** quick search/filter by DOI, year, authors without opening PDFs.
-- - **Single source of truth:** all demo/sample files must be stored here; no duplicates elsewhere.
+- **Single source of truth:** all demo/sample files must be stored here; no duplicates elsewhere.
