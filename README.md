@@ -1,7 +1,8 @@
 # SmartResearch – CSIT321
 
-Initial repo scaffold
+Repo scaffold
 
 - backend/
 - frontend/
 - docs/
+- data/
