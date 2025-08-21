@@ -3,15 +3,27 @@
 This snapshot includes the key risks identified during the initial project phase (A1).  
 The full, ongoing register is maintained in `/docs/risk_register.md`.
 
-| Risk ID | Description | Category | Likelihood | Impact | Mitigation Strategy | Owner |
-|---------|-------------|----------|------------|--------|----------------------|-------|
-| R1 | Summary fidelity issues (AI generates inaccurate or misleading digests). | Technical | Medium | High | Pilot evaluation with sample papers; implement rubric-based review. | Team |
-| R2 | Cluster coherence not interpretable for users. | Technical | Medium | Medium | Adjust algorithms; introduce manual tagging fallback. | Team |
-| R3 | Schedule slippage due to uneven workload or delays in feature implementation. | Project Mgmt | Medium | High | Weekly check-ins, task allocation tracked via GitHub Issues. | Chelsea |
-| R4 | Data licensing breach from non-OA sources. | Compliance | Low | High | Restrict to open-access or UOW-licensed papers only; log licences in metadata.csv. | All |
-| R5 | Team communication breakdown (async vs scheduled). | Organisational | Medium | Medium | Discord for daily async comms; Zoom milestone check-ins. | All |
+---
+
+## Risk Table
+
+| ID  | Risk                                  | Cause                                                            | L | I | E | Owner                  | Mitigation (prevent)                                                                         | Early trigger (detect)                               | Contingency (respond)                                                             | Status |
+| --- | ------------------------------------- | ---------------------------------------------------------------- | - | - | - | ---------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------- | ------ |
+| R1  | Summaries lack fidelity/coverage      | Model limitations on academic prose; poor prompts/length control | 3 | 3 | 9 | **TBD**               | Compare 2–3 models; use hybrid (extractive+abstractive); length/section prompts; spot-checks | Low reviewer usefulness ratings; hallucination flags | Switch model/strategy; cap scope of summaries; add human-in-the-loop for outliers | Open   |
+| R2  | Clusters are incoherent/hard to label | Weak embeddings; poor *k*; noisy text                            | 3 | 3 | 9 | **TBD**               | Grid search *k*; try alt algos; prune noise; keyphrase labelling                             | Low cluster purity; labels not intelligible          | Fall back to similarity lists; allow manual *k* override                          | Open   |
+| R3  | Schedule slippage                     | Underestimated integration; exams/illness                        | 2–3 | 3 | 6–9 | **Chelsea**            | Milestone gates; two-week sprints; cut stretch goals                                         | Missed sprint target; >2 overdue actions             | Descoping; task reallocation; focused dev block                                   | Open   |
+| R4  | Scope creep                           | Mid-semester “nice to haves”                                     | 2 | 2 | 4 | **Chelsea**            | Change control; baseline scope; weekly backlog hygiene                                       | Unplanned tickets; ambiguous “research” items        | Park in backlog; trade scope for time                                             | Open   |
+| R5  | PDF parsing failures                  | Scanned/corrupt PDFs; odd encodings                              | 2 | 2 | 4 | **TBD**              | Robust parser; pre-flight validation; fail-gracefully                                        | >5% parse errors; repeated unsupported files         | Warn user; accept text upload; document “supported” list                          | Open   |
+| R6  | Performance bottlenecks               | Heavy models on limited hardware                                 | 2 | 2 | 4 | **TBD**              | Batch jobs; caching; distilled models                                                        | 10-PDF batch >60s; single summary >5s median         | Cap batch size; queue jobs; swap to lighter model                                 | Open   |
+| R7  | UI usability is poor                  | Dense outputs; unclear labels                                    | 2 | 2 | 4 | **TBD**             | Quick UX tests; simplify screens; empty-state copy                                           | Task “find paper” >3 clicks; user confusion          | Simplify flows; add tooltips/search defaults                                      | Open   |
+| R8  | Acceptance mismatch with advisor      | Differing expectations on MVP                                    | 2 | 3 | 6 | **Chelsea**            | Fortnightly demos; written ACs in §4.10                                                      | Negative demo feedback; change requests              | Re-baseline ACs; adjust scope; rapid iteration                                    | Open   |
+| R9  | Data/privacy concerns                 | Handling user PDFs                                               | 1 | 2 | 2 | **TBD**              | Local processing; deletion option; no third-party calls                                      | Advisor query; external sample request               | Anonymise; obtain consent; purge artefacts                                        | Open   |
+| R10 | Toolchain/library conflicts           | Version drift; breaking changes                                  | 2 | 2 | 4 | **TBD**              | Pin versions; lockfile; CI install check                                                     | Build failures; dependency warnings                  | Freeze env; swap dependency                                                       | Open   |
+| R11 | Evaluation ambiguity                  | No clear ground truth for “good”                                 | 2 | 2 | 4 | **TBD** + **Chelsea** | Define rubric; labelled sample for purity                                                    | Reviewer disagreement; noisy scores                  | Multiple raters; consensus rules; revise rubric                                   | Open   |
+| R12 | Stakeholder availability              | Advisor/team not present                                         | 1 | 2 | 2 | **Chelsea**            | Asynchronous Discord workflow; early agenda/docs                                             | Missed check-ins; slow feedback                      | Proceed on baseline; escalate via email; document decisions                       | Open   |
 
 ---
 
 ## Change Log
-- 21 Aug 2025 — Initial register created *(Chelsea)* for Assignment 1 submission.
+- **21 Aug 2025** — Initial register drafted (R1–R5) *(Chelsea)*.  
+- **22 Aug 2025** — Expanded Assignment 1 snapshot to full set R1–R12 *(Chelsea)*.  
