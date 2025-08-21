@@ -10,3 +10,9 @@ The full, ongoing register is maintained in `/docs/risk_register.md`.
 | R3 | Schedule slippage due to uneven workload or delays in feature implementation. | Project Mgmt | Medium | High | Weekly check-ins, task allocation tracked via GitHub Issues. | Chelsea |
 | R4 | Data licensing breach from non-OA sources. | Compliance | Low | High | Restrict to open-access or UOW-licensed papers only; log licences in metadata.csv. | All |
 | R5 | Team communication breakdown (async vs scheduled). | Organisational | Medium | Medium | Discord for daily async comms; Zoom milestone check-ins. | All |
+
+---
+
+## Change Log
+- 21 Aug 2025 — Initial register created *(Chelsea)* for Assignment 1 submission.
+
