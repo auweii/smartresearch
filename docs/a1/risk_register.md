@@ -15,4 +15,3 @@ The full, ongoing register is maintained in `/docs/risk_register.md`.
 
 ## Change Log
 - 21 Aug 2025 — Initial register created *(Chelsea)* for Assignment 1 submission.
-
