@@ -21,9 +21,11 @@ It begins with the snapshot identified during Assignment 1 and will be updated a
 | R10     | Toolchain/library conflicts (breaking changes). | Technical      | Medium     | Medium | Pin versions; lockfile; CI install check.                                                | **TBD** |
 | R11     | Evaluation ambiguity (no clear “good” baseline). | Evaluation     | Medium     | Medium | Define rubric; small labelled sample for validation; multiple raters.                    | **TBD** |
 | R12     | Stakeholder availability (advisor/team absence). | Organisational | Low        | Medium | Asynchronous Discord workflow; early agendas + shared docs.                             | **Chelsea** |
+| R13     | Non-attendance of team members at scheduled meetings, without prior notice. | Organisational | Medium     | High   | Expectations set in Discord (3 Sept); escalated to advisor; logged in minutes and register. | **Chelsea** |
 
 ---
 
 ## Change Log
 - **21 Aug 2025** — Initialised baseline risks R1–R5 *(Chelsea)*.  
 - **22 Aug 2025** — Expanded register to full R1–R12; assigned current owners where applicable, left others as **TBD**.  
+- **03 Sept 2025** — Logged repeated non-attendance issue as new risk R13 *(Chelsea)*. Advisor notified; agreed it should be kept in record and included in assignments.  
