@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import List, Tuple
 import re
 import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.tokenize import sent_tokenize
 
 # NLTK + spaCy
 from nltk.corpus import stopwords
@@ -51,42 +53,53 @@ def topic_label_sklearn(lda: LatentDirichletAllocation, vectorizer: CountVectori
     return " / ".join(top) if len(top) else f"Topic {topic_id}"
 
 # ---------- extractive summarizer (sklearn TF-IDF) ----------
+# lightweight extractive fallback (already in your file? keep the best version you have)
 def _tfidf_sentence_matrix(sentences: List[str]) -> np.ndarray:
-    vect = TfidfVectorizer(stop_words="english", max_features=5000)
-    X = vect.fit_transform(sentences)
+    X = TfidfVectorizer(stop_words="english", max_features=5000).fit_transform(sentences)
     return X.toarray()
 
 def summarize_extractive_sklearn(text: str, max_sentences: int = 5, max_chars: int | None = 900) -> str:
-    """
-    Split into sentences, TF-IDF each sentence, score by cosine to centroid,
-    take top-N and keep original order. Fast + dependency-light.
-    """
-    sentences = [s.strip() for s in sent_tokenize(text) if s.strip()]
-    if not sentences:
+    sents = [s.strip() for s in sent_tokenize(text or "") if s.strip()]
+    if not sents:
         return ""
-    if len(sentences) > 3000:
-        sentences = sentences[:3000]
-
-    X = _tfidf_sentence_matrix(sentences)  # shape [n, d]
-    if X.size == 0:
-        return ""
-
-    centroid = X.mean(axis=0, keepdims=True)             # [1, d]
+    if len(sents) > 3000: sents = sents[:3000]
+    X = _tfidf_sentence_matrix(sents)
+    if X.size == 0: return ""
+    centroid = X.mean(axis=0, keepdims=True)
     norms = (np.linalg.norm(X, axis=1) * np.linalg.norm(centroid)).clip(min=1e-8)
-    scores = (X @ centroid.T).ravel() / norms            # cosine similarity
-
-    n = max(1, min(max_sentences, len(sentences)))
-    top_idx = np.argsort(-scores)[:n]
-    top_idx_sorted = sorted(top_idx.tolist())
-    summary = " ".join(sentences[i] for i in top_idx_sorted)
-
+    scores = (X @ centroid.T).ravel() / norms
+    n = max(1, min(max_sentences, len(sents)))
+    idx = sorted(np.argsort(-scores)[:n].tolist())
+    summary = " ".join(sents[i] for i in idx)
     if max_chars and len(summary) > max_chars:
         out, total = [], 0
-        for i in top_idx_sorted:
-            s = sentences[i]
-            if total + len(s) + 1 > max_chars:
-                break
+        for i in idx:
+            s = sents[i]
+            if total + len(s) + 1 > max_chars: break
             out.append(s); total += len(s) + 1
-        summary = " ".join(out) if out else sentences[top_idx_sorted[0]][:max_chars]
-
+        summary = " ".join(out) or sents[idx[0]][:max_chars]
     return summary
+
+# Hugging Face pipeline (lazy init)
+_HF_PIPE = None
+_HAS_HF = False
+try:
+    from transformers import pipeline
+    _HF_PIPE = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+    _HAS_HF = True
+except Exception:
+    _HF_PIPE = None
+    _HAS_HF = False
+
+def summarize_paper_hf(text: str, max_chars: int = 900, use_abstractive: bool = True) -> str:
+    """If use_abstractive and HF is available, generate an abstractive summary; otherwise fallback to extractive."""
+    txt = (text or "").strip()
+    if not txt:
+        return ""
+    if use_abstractive and _HAS_HF:
+        # keep input reasonable length (BART limit ≈ 1024 tokens)
+        inp = txt[:2000]
+        out = _HF_PIPE(inp, max_length=220, min_length=60, do_sample=False)
+        return (out[0].get("summary_text", "").strip() if out else "")[:max_chars]
+    # fallback
+    return summarize_extractive_sklearn(txt, max_sentences=5, max_chars=max_chars)

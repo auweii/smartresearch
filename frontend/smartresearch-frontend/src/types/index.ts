@@ -13,20 +13,19 @@ export type JobStart = {
   max_pages?: number;
   num_topics?: number;
   cluster_k?: number | null;
-  // NEW:
-  summary_sentences?: number;
   summary_chars?: number;
   section_mode?: "full" | "abstract" | "section";
   section_label?: string | null;
+  use_abstractive?: boolean; // ← new
 };
 
 
 export type JobStatus = {
-  job_id: string;
   state: "QUEUED" | "PROCESSING" | "DONE" | "ERROR";
   stage: string;
-  overall_progress: number;
+  overall_progress: number;   // 0..100
   message?: string | null;
+  eta_seconds?: number | null;   // 👈 add this
 };
 
 export type ClusterMember = {

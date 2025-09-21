@@ -15,9 +15,8 @@ export default function ProcessPanel({ files }: { files: FileInfo[] }) {
     setResult(null);
     const id = await startJob({
       file_ids: files.map((f) => f.file_id),
-      section_mode: "abstract",       // always summarize abstract
-      section_label: "introduction",  // ignored unless section_mode === "section"
-      summary_sentences: 5,
+      section_mode: "abstract", // always summarize abstract
+      section_label: "introduction", // ignored unless section_mode === "section"
       summary_chars: 900,
       num_topics: 8,
       max_pages: 40,
@@ -57,6 +56,9 @@ export default function ProcessPanel({ files }: { files: FileInfo[] }) {
           </div>
           <progress value={status.overall_progress} max={100} />
           {status.message && <div className="muted">{status.message}</div>}
+          {typeof status.eta_seconds === "number" && status.eta_seconds > 0 && (
+            <div className="muted">ETA: ~{status.eta_seconds}s</div>
+          )}
         </div>
       )}
 
@@ -71,13 +73,20 @@ export default function ProcessPanel({ files }: { files: FileInfo[] }) {
                 {c.members.map((m) => (
                   <li key={m.file_id} className="member">
                     <div>
-                      <b>{m.title ?? m.new_name}</b> {m.year ? `(${m.year})` : ""} — {m.authors ?? "—"}
+                      <b>{m.title ?? m.new_name}</b>{" "}
+                      {m.year ? `(${m.year})` : ""} — {m.authors ?? "—"}
                       {m.key_terms?.length ? (
-                        <span className="muted"> — {m.key_terms.join(", ")}</span>
+                        <span className="muted">
+                          {" "}
+                          — {m.key_terms.join(", ")}
+                        </span>
                       ) : null}
                     </div>
                     {m.paper_summary && (
-                      <CollapsibleSummary text={m.paper_summary} maxChars={SUMMARY_PREVIEW_CHARS} />
+                      <CollapsibleSummary
+                        text={m.paper_summary}
+                        maxChars={SUMMARY_PREVIEW_CHARS}
+                      />
                     )}
                   </li>
                 ))}
@@ -85,7 +94,8 @@ export default function ProcessPanel({ files }: { files: FileInfo[] }) {
             </div>
           ))}
           <small className="muted">
-            Method: {String(result.metrics.method)}; k={String(result.metrics.k)}
+            Method: {String(result.metrics.method)}; k=
+            {String(result.metrics.k)}
           </small>
         </div>
       )}
@@ -131,7 +141,13 @@ export default function ProcessPanel({ files }: { files: FileInfo[] }) {
 }
 
 /** Collapsible summary with "Show more / Show less" */
-function CollapsibleSummary({ text, maxChars = 280 }: { text: string; maxChars?: number }) {
+function CollapsibleSummary({
+  text,
+  maxChars = 280,
+}: {
+  text: string;
+  maxChars?: number;
+}) {
   const [open, setOpen] = useState(false);
 
   // try to avoid cutting mid-word; fall back to hard cut

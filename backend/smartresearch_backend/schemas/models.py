@@ -15,11 +15,11 @@ class JobStart(BaseModel):
     max_pages: int = 40
     num_topics: int = 8
     cluster_k: Optional[int] = None
-    # NEW:
-    summary_sentences: int = 5
     summary_chars: int = 900
-    section_mode: Literal["full", "abstract", "section"] = "full"
+    section_mode: Literal["full", "abstract", "section"] = "abstract"
     section_label: Optional[str] = None
+    use_abstractive: bool = True
+    abstract_scan_pages: int = 25   # 👈 new
 
 class JobStatus(BaseModel):
     job_id: str
