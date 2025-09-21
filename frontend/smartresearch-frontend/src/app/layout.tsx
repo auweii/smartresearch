@@ -1,33 +1,33 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "SmartResearch",
-  description: "One stop solution for research papers",
+  description: "Upload and cluster research PDFs",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function Header() {
+  return (
+    <div className="topbar">
+      <div className="topbar-inner">
+        <div className="brand">SmartResearch</div>
+        <nav className="nav">
+          <Link href="/">Upload</Link>
+          <Link href="/cluster">Cluster</Link>
+          <Link href="/export">Export</Link>
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body>
+        <Header />
+        <main className="page">{children}</main>
       </body>
     </html>
   );

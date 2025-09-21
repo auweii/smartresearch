@@ -65,3 +65,26 @@ def parse_heuristic(text: str) -> Tuple[Optional[str], Optional[str], Optional[i
             pass
 
     return title, authors, year
+
+# ---------- Add this wrapper so router can import parse_front_matter ----------
+def parse_front_matter_from_text(text: str) -> Tuple[Optional[str], Optional[str], Optional[int]]:
+    title, authors, year = parse_structured(text)
+    if not (title and authors and year):
+        ht, ha, hy = parse_heuristic(text)
+        title = title or ht
+        authors = authors or ha
+        year = year or hy
+    return title, authors, year
+
+def parse_front_matter(path: str, pages: int = 2) -> Tuple[Optional[str], Optional[str], Optional[int]]:
+    """
+    Open the PDF, read the first `pages` pages as text, then run structured→heuristic parsers.
+    """
+    import fitz  # local import so this module works even if PyMuPDF isn't loaded elsewhere
+    doc = fitz.open(path)
+    try:
+        n = min(max(1, pages), len(doc))
+        text = "\n".join((doc[i].get_text("text") or "") for i in range(n))
+    finally:
+        doc.close()
+    return parse_front_matter_from_text(text)
