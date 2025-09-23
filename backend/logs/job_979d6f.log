@@ -1,0 +1,11 @@
+2025-09-23 22:26:21 | INFO     | [smartresearch.job.job_979d6f] Starting job with 3 files
+2025-09-23 22:26:21 | DEBUG    | [smartresearch.job.job_979d6f] payload={'file_ids': ['74547e3f', '9d95ca31', '3fbcbc9d'], 'max_pages': 40, 'num_topics': 8, 'cluster_k': None, 'summary_chars': 900, 'section_mode': 'abstract', 'section_label': 'introduction', 'use_abstractive': True, 'abstract_scan_pages': 25}
+2025-09-23 22:26:21 | WARNING  | [smartresearch.job.job_979d6f] Missing FILES record for 74547e3f; skipping
+2025-09-23 22:26:21 | WARNING  | [smartresearch.job.job_979d6f] Missing FILES record for 9d95ca31; skipping
+2025-09-23 22:26:21 | INFO     | [smartresearch.job.job_979d6f] [3/3] research_and_development_structures_within_the_australian_wine_industry_organizational_implications_aylward_2008.pdf (file_id=3fbcbc9d)
+2025-09-23 22:26:21 | DEBUG    | [smartresearch.job.job_979d6f] Extracted 1047 chars
+2025-09-23 22:26:27 | INFO     | [smartresearch.job.job_979d6f] Summary length=459 chars
+2025-09-23 22:26:27 | INFO     | [smartresearch.job.job_979d6f] Building topic model (sklearn LDA)
+2025-09-23 22:26:27 | INFO     | [smartresearch.job.job_979d6f] Clustering documents
+2025-09-23 22:26:29 | INFO     | [smartresearch.job.job_979d6f] Clustering done: k=1
+2025-09-23 22:26:29 | INFO     | [smartresearch.job.job_979d6f] Job finished successfully
