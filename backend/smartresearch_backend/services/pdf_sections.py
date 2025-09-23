@@ -1,93 +1,173 @@
 # smartresearch_backend/services/pdf_sections.py
 from __future__ import annotations
 import re
-from typing import Optional
+from typing import Optional, Tuple
 import fitz  # PyMuPDF
 
-# ---------- helpers ----------
+# stop when we hit a typical next-heading
 _HEADING_STOP = re.compile(
-    r"(?im)^\s*(\d+\.?\s+)?("
+    r"(?im)^\s*(\d+[\.\)]\s+)?("
     r"introduction|background|related work|literature review|methods?|methodology|"
     r"materials and methods|results|experiments?|analysis|discussion|conclusion|"
-    r"conclusions|summary|acknowledg(e)?ments?|references|bibliography|appendix"
+    r"conclusions|summary|acknowledg(e)?ments?|keywords?|references|bibliography|appendix"
     r")\s*$"
 )
+
+# accepted variants for "Abstract"
+_ABS_LABELS = [
+    r"abstract", r"extended abstract", r"executive summary", r"summary", r"summaries"
+]
 
 def _norm(s: str) -> str:
     return re.sub(r"[ \t]+", " ", (s or "").strip())
 
-# ---------- abstract ----------
-def extract_abstract(pdf_path: str, max_pages: int = 25) -> Optional[str]:
+def _join_pages(doc, max_pages: int) -> str:
+    n = min(max_pages, len(doc))
+    return "\n".join((doc[i].get_text("text") or "") for i in range(n))
+
+def _find_outline_abstract(doc, n: int) -> Optional[str]:
+    toc = doc.get_toc(simple=True) or []
+    for _, title, page in toc[:80]:
+        if title and re.search(r"(?i)\babstract\b", title):
+            if 1 <= (page or 0) <= n:
+                return doc[page - 1].get_text("text") or ""
+    return None
+
+def _largest_font_heading_extract(doc, max_pages: int) -> Optional[str]:
     """
-    Try to extract the Abstract from the first `max_pages` pages.
-    Heuristics:
-      1) TOC/outline entry 'Abstract'
-      2) Standalone heading 'Abstract' on its own line -> until next heading
-      3) Inline 'Abstract:' prefix -> until blank/Keywords/next heading
+    Heuristic: find a heading span whose text =~ 'Abstract' with large size/bold.
+    Then extract until next large heading or canonical stop heading.
+    """
+    n = min(max_pages, len(doc))
+    # collect candidate (page_index, y1, text, font_size, is_bold)
+    candidates: list[Tuple[int, float, str, float, bool]] = []
+
+    for pi in range(n):
+        d = doc[pi].get_text("dict")  # layout dict with blocks/lines/spans
+        for b in d.get("blocks", []):
+            for l in b.get("lines", []):
+                for sp in l.get("spans", []):
+                    t = (sp.get("text") or "").strip()
+                    if not t:
+                        continue
+                    if re.fullmatch(r"(?is)\s*(abstract|extended abstract)\s*", t):
+                        size = float(sp.get("size", 0.0))
+                        font = (sp.get("font", "") or "").lower()
+                        is_bold = "bold" in font or "black" in font
+                        y1 = float(sp.get("bbox", [0, 0, 0, 0])[1])
+                        candidates.append((pi, y1, t, size, is_bold))
+
+    if not candidates:
+        return None
+
+    # pick the "strongest heading": largest size, then boldness, then earliest page
+    candidates.sort(key=lambda x: (x[3], x[4], -x[0]), reverse=True)
+    h_page, _, _, _, _ = candidates[0]
+
+    # extract from heading line to next heading/stop keyword on the SAME PAGE FIRST
+    page_text = doc[h_page].get_text("text") or ""
+    # split by lines, find the "Abstract" line, take following lines until stop
+    lines = [ln for ln in page_text.splitlines()]
+    start_idx = None
+    for idx, ln in enumerate(lines):
+        if re.fullmatch(r"(?im)\s*abstract\s*$", ln.strip()):
+            start_idx = idx + 1
+            break
+    if start_idx is not None:
+        rest = "\n".join(lines[start_idx:])
+        stop = _HEADING_STOP.search(rest)
+        block = rest[: stop.start()] if stop else rest
+        if block.strip():
+            return block
+
+    # else fall back: return full page text
+    return page_text
+
+def extract_abstract(pdf_path: str, max_pages: int = 25, max_chars: int = 3000) -> Optional[str]:
+    """
+    Extract Abstract using a cascade of strategies:
+      1) Outline/TOC entry named 'Abstract'
+      2) Style-aware heading detection (font size/bold) on 'Abstract'
+      3) Standalone 'Abstract' line -> until next canonical heading
+      4) Inline 'Abstract:' form -> until blank/Keywords/next heading
     """
     doc = fitz.open(pdf_path)
     try:
         n = min(max_pages, len(doc))
-        pages_text = [doc[i].get_text("text") or "" for i in range(n)]
-        joined = "\n".join(pages_text)
 
         # 1) TOC/outline
-        toc = doc.get_toc(simple=True) or []
-        for _, title, page in toc[:40]:
-            if re.search(r"(?i)\babstract\b", title or "") and 1 <= (page or 0) <= n:
-                t = doc[page - 1].get_text("text") or ""
-                return _norm(t)[:3000] or None
+        t = _find_outline_abstract(doc, n)
+        if t:
+            return _norm(t)[:max_chars] or None
 
-        # 2) Standalone heading
-        m = re.search(r"(?im)^\s*abstract\s*$", joined)
+        # 2) Style-aware
+        t = _largest_font_heading_extract(doc, n)
+        if t and t.strip():
+            return _norm(t)[:max_chars] or None
+
+        # 3) Standalone heading in joined text
+        joined = _join_pages(doc, n)
+
+        # some PDFs have numbering like "0 Abstract" or "Abstract 1"
+        m = re.search(r"(?im)^\s*(\d+[\.\)]\s+)?abstract\s*(\d+[\.\)]\s*)?$", joined)
         if m:
             rest = joined[m.end():]
             stop = _HEADING_STOP.search(rest)
             block = rest[: stop.start()] if stop else rest
-            return _norm(block)[:3000] or None
+            if block.strip():
+                return _norm(block)[:max_chars] or None
 
-        # 3) Inline 'Abstract:'
-        m = re.search(
-            r"(?is)\babstract\s*[:\-]\s*(.+?)(?:\n{2,}|keywords?\s*[:\-]|introduction\b)",
+        # 4) Inline 'Abstract:'
+        inline = re.search(
+            r"(?is)\babstract\s*[:\-]\s*(.+?)(?:\n{2,}|keywords?\s*[:\-]|"
+            r"introduction\b|background\b|related work\b|literature review\b)",
             joined,
         )
-        if m:
-            return _norm(m.group(1))[:3000] or None
+        if inline:
+            return _norm(inline.group(1))[:max_chars] or None
 
+        # 5) Broader label variants: (executive summary, summary, etc.)
+        for lab in _ABS_LABELS:
+            m2 = re.search(rf"(?im)^\s*(\d+[\.\)]\s+)?{lab}\s*$", joined)
+            if m2:
+                rest = joined[m2.end():]
+                stop = _HEADING_STOP.search(rest)
+                block = rest[: stop.start()] if stop else rest
+                if block.strip():
+                    return _norm(block)[:max_chars] or None
+
+        # 6) Nothing found
         return None
     finally:
         doc.close()
 
-# ---------- generic section ----------
-def extract_section(pdf_path: str, label: str, scan_pages: int = 25) -> Optional[str]:
+def extract_section(pdf_path: str, label: str, scan_pages: int = 25, max_chars: int = 4000) -> Optional[str]:
     """
-    Extract a named section (e.g., 'introduction', 'methods', 'conclusion') from the first `scan_pages`.
-    Looks for a heading line that matches the label (case-insensitive), optionally with numbering.
-    Returns text up to the next major heading.
+    Generic section extractor. Heading like '1 Introduction' or 'Introduction'.
+    Also tries inline 'Label:' as fallback.
     """
     if not label:
         return None
-    label_rx = re.compile(rf"(?im)^\s*(\d+\.?\s+)?{re.escape(label)}\s*$")
-
     doc = fitz.open(pdf_path)
     try:
         n = min(scan_pages, len(doc))
-        pages_text = [doc[i].get_text("text") or "" for i in range(n)]
-        joined = "\n".join(pages_text)
+        joined = _join_pages(doc, n)
 
+        # Heading line
+        label_rx = re.compile(rf"(?im)^\s*(\d+[\.\)]\s+)?{re.escape(label)}\s*$")
         m = label_rx.search(joined)
-        if not m:
-            # also try inline "Label:" form
-            m = re.search(rf"(?is)\b{re.escape(label)}\s*[:\-]\s*(.+?)\n{{2,}}", joined)
-            if m:
-                return _norm(m.group(1))[:4000] or None
+        if m:
+            rest = joined[m.end():]
+            stop = _HEADING_STOP.search(rest)
+            block = rest[: stop.start()] if stop else rest
+            if block.strip():
+                return _norm(block)[:max_chars] or None
 
-        if not m:
-            return None
+        # Inline "Label: ..."
+        m2 = re.search(rf"(?is)\b{re.escape(label)}\s*[:\-]\s*(.+?)\n{{2,}}", joined)
+        if m2:
+            return _norm(m2.group(1))[:max_chars] or None
 
-        rest = joined[m.end():]
-        stop = _HEADING_STOP.search(rest)
-        block = rest[: stop.start()] if stop else rest
-        return _norm(block)[:4000] or None
+        return None
     finally:
         doc.close()

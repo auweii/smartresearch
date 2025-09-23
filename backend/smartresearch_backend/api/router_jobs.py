@@ -24,3 +24,17 @@ async def job_result(job_id: str):
     if not j or j.get("state") != "DONE":
         return {"error": "Result not ready"}
     return {"job_id": job_id, **(j["result"] or {})}
+
+@router.get("/debug/abstract/{file_id}")
+def debug_abstract(file_id: str, pages: int = 25):
+    rec = FILES.get(file_id)
+    if not rec:
+        raise HTTPException(404, "file not found")
+    from ..services.pdf_sections import extract_abstract
+    text = extract_abstract(rec["path"], max_pages=pages)
+    return {
+        "file_id": file_id,
+        "chars": len(text or ""),
+        "preview": (text or "")[:1000],
+    }
+
