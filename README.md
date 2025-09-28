@@ -1,4 +1,7 @@
-# SmartResearch – CSIT321
+# SmartResearch – Helps in finding relevant research papers, summarizes, and clusters accordingly
+
+Quick Workflow 
+
 
 
 Setup
