@@ -1,0 +1,27 @@
+2025-09-24 20:33:12 | INFO     | smartresearch.job.job_55faea | Starting job with 10 files
+2025-09-24 20:33:12 | INFO     | smartresearch.job.job_55faea | [1/10] action_research_as_a_professional_development_model_for_the_teaching_of_writing_in_early_stage_one_stage_kervin_2004_f99a36.pdf (file_id=770ece90)
+2025-09-24 20:33:20 | INFO     | smartresearch.job.job_55faea | Summary length=592 chars
+2025-09-24 20:33:20 | INFO     | smartresearch.job.job_55faea | [2/10] approaches_to_evaluation_of_research_and_development_in_agriculture_a_case_study_of_rice_productivity_in_siripongsaroj_2001_2819dd.pdf (file_id=5953ad54)
+2025-09-24 20:33:29 | INFO     | smartresearch.job.job_55faea | Summary length=418 chars
+2025-09-24 20:33:29 | INFO     | smartresearch.job.job_55faea | [3/10] disseminating_the_outcomes_of_educational_research_to_inform_mathematics_teachers_practices_hood_2009_38b9bd.pdf (file_id=a37f84f6)
+2025-09-24 20:33:36 | INFO     | smartresearch.job.job_55faea | Summary length=457 chars
+2025-09-24 20:33:36 | INFO     | smartresearch.job.job_55faea | [4/10] industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984_712a75.pdf (file_id=36526b4b)
+2025-09-24 20:33:36 | ERROR    | smartresearch.job.job_55faea | Section extraction failed: no such file: 'data\uploads\industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984_712a75.pdf'
+Traceback (most recent call last):
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\jobs.py", line 89, in run_job
+    text = extract_abstract(rec["path"], max_pages=abstract_scan_pages)
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\pdf_sections.py", line 94, in extract_abstract
+    doc = fitz.open(pdf_path)
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\pymupdf\__init__.py", line 2969, in __init__
+    raise FileNotFoundError(f"no such file: '{filename}'")
+pymupdf.FileNotFoundError: no such file: 'data\uploads\industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984_712a75.pdf'
+2025-09-24 20:33:36 | WARNING  | smartresearch.job.job_55faea | No section text found; falling back to full-text extract
+2025-09-24 20:33:36 | ERROR    | smartresearch.job.job_55faea | Job failed: no such file: 'data\uploads\industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984_712a75.pdf'
+Traceback (most recent call last):
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\jobs.py", line 99, in run_job
+    text = extract_text(rec["path"], max_pages=max_pages)
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\pdf_text.py", line 4, in extract_text
+    doc = fitz.open(pdf_path)
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\pymupdf\__init__.py", line 2969, in __init__
+    raise FileNotFoundError(f"no such file: '{filename}'")
+pymupdf.FileNotFoundError: no such file: 'data\uploads\industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984_712a75.pdf'

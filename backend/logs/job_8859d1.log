@@ -1,0 +1,115 @@
+2025-09-23 23:40:39 | INFO     | smartresearch.job.job_8859d1 | Starting job with 4 files
+2025-09-23 23:40:39 | INFO     | smartresearch.job.job_8859d1 | [1/4] research_and_development_structures_within_the_australian_wine_industry_organizational_implications_aylward_2008.pdf (file_id=7047debe)
+2025-09-23 23:40:45 | INFO     | smartresearch.job.job_8859d1 | Summary length=459 chars
+2025-09-23 23:40:45 | INFO     | smartresearch.job.job_8859d1 | [2/4] industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984.pdf (file_id=1e0dec51)
+2025-09-23 23:40:52 | INFO     | smartresearch.job.job_8859d1 | Summary length=409 chars
+2025-09-23 23:40:52 | INFO     | smartresearch.job.job_8859d1 | [3/4] action_research_as_a_professional_development_model_for_the_teaching_of_writing_in_early_stage_one_stage_kervin_2004.pdf (file_id=a29c8b93)
+2025-09-23 23:41:00 | INFO     | smartresearch.job.job_8859d1 | Summary length=592 chars
+2025-09-23 23:41:00 | INFO     | smartresearch.job.job_8859d1 | [4/4] approaches_to_evaluation_of_research_and_development_in_agriculture_a_case_study_of_rice_productivity_in_siripongsaroj_2001.pdf (file_id=d75a2a43)
+2025-09-23 23:41:08 | INFO     | smartresearch.job.job_8859d1 | Summary length=418 chars
+2025-09-23 23:41:08 | INFO     | smartresearch.job.job_8859d1 | Clustering with BERTopic
+2025-09-23 23:41:24 | ERROR    | smartresearch.job.job_8859d1 | Job failed: Cannot use scipy.linalg.eigh for sparse A with k >= N. Use scipy.linalg.eigh(A.toarray()) or reduce k.
+Traceback (most recent call last):
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\bertopic\_bertopic.py", line 3794, in _reduce_dimensionality
+    self.umap_model.fit(embeddings, y=y)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\umap_.py", line 2817, in fit
+    self.embedding_, aux_data = self._fit_embed_data(
+                                ~~~~~~~~~~~~~~~~~~~~^
+        self._raw_data[index],
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\umap_.py", line 2872, in _fit_embed_data
+    return simplicial_set_embedding(
+        X,
+    ...<20 lines>...
+        tqdm_kwds=self.tqdm_kwds,
+    )
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\umap_.py", line 1109, in simplicial_set_embedding
+    embedding = spectral_layout(
+        data,
+    ...<4 lines>...
+        metric_kwds=metric_kwds,
+    )
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\spectral.py", line 304, in spectral_layout
+    return _spectral_layout(
+        data=data,
+    ...<7 lines>...
+        maxiter=maxiter,
+    )
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\spectral.py", line 519, in _spectral_layout
+    eigenvalues, eigenvectors = scipy.sparse.linalg.eigsh(
+                                ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        L,
+        ^^
+    ...<5 lines>...
+        maxiter=maxiter or graph.shape[0] * 5,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\scipy\sparse\linalg\_eigen\arpack\arpack.py", line 1612, in eigsh
+    raise TypeError("Cannot use scipy.linalg.eigh for sparse A with "
+                    "k >= N. Use scipy.linalg.eigh(A.toarray()) or"
+                    " reduce k.")
+TypeError: Cannot use scipy.linalg.eigh for sparse A with k >= N. Use scipy.linalg.eigh(A.toarray()) or reduce k.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\jobs.py", line 103, in run_job
+    bt = build_topics_bertopic(texts_for_topics, model_name="all-MiniLM-L6-v2", min_cluster_size=3)
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\topic_bertopic.py", line 68, in build_topics_bertopic
+    topics, _ = topic_model.fit_transform(clean_texts)
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\bertopic\_bertopic.py", line 472, in fit_transform
+    umap_embeddings = self._reduce_dimensionality(embeddings, y)
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\bertopic\_bertopic.py", line 3796, in _reduce_dimensionality
+    self.umap_model.fit(embeddings)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\umap_.py", line 2817, in fit
+    self.embedding_, aux_data = self._fit_embed_data(
+                                ~~~~~~~~~~~~~~~~~~~~^
+        self._raw_data[index],
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\umap_.py", line 2872, in _fit_embed_data
+    return simplicial_set_embedding(
+        X,
+    ...<20 lines>...
+        tqdm_kwds=self.tqdm_kwds,
+    )
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\umap_.py", line 1109, in simplicial_set_embedding
+    embedding = spectral_layout(
+        data,
+    ...<4 lines>...
+        metric_kwds=metric_kwds,
+    )
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\spectral.py", line 304, in spectral_layout
+    return _spectral_layout(
+        data=data,
+    ...<7 lines>...
+        maxiter=maxiter,
+    )
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\spectral.py", line 519, in _spectral_layout
+    eigenvalues, eigenvectors = scipy.sparse.linalg.eigsh(
+                                ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        L,
+        ^^
+    ...<5 lines>...
+        maxiter=maxiter or graph.shape[0] * 5,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\scipy\sparse\linalg\_eigen\arpack\arpack.py", line 1612, in eigsh
+    raise TypeError("Cannot use scipy.linalg.eigh for sparse A with "
+                    "k >= N. Use scipy.linalg.eigh(A.toarray()) or"
+                    " reduce k.")
+TypeError: Cannot use scipy.linalg.eigh for sparse A with k >= N. Use scipy.linalg.eigh(A.toarray()) or reduce k.

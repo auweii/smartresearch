@@ -1,0 +1,10 @@
+2025-09-23 22:48:10 | INFO     | [smartresearch.job.job_bcdb48] Starting job with 2 files
+2025-09-23 22:48:10 | DEBUG    | [smartresearch.job.job_bcdb48] payload={'file_ids': ['845edc9b', 'f63341d9'], 'max_pages': 40, 'num_topics': 8, 'cluster_k': None, 'summary_chars': 900, 'section_mode': 'abstract', 'section_label': 'introduction', 'use_abstractive': True, 'abstract_scan_pages': 25}
+2025-09-23 22:48:10 | WARNING  | [smartresearch.job.job_bcdb48] Missing FILES record for 845edc9b; skipping
+2025-09-23 22:48:10 | INFO     | [smartresearch.job.job_bcdb48] [2/2] the_study_of_fossil_faunas_in_the_walanae_basin_indonesia_suyono_2009.pdf (file_id=f63341d9)
+2025-09-23 22:48:10 | DEBUG    | [smartresearch.job.job_bcdb48] Extracted 3000 chars
+2025-09-23 22:48:17 | INFO     | [smartresearch.job.job_bcdb48] Summary length=412 chars
+2025-09-23 22:48:17 | INFO     | [smartresearch.job.job_bcdb48] Building topic model (sklearn LDA)
+2025-09-23 22:48:17 | INFO     | [smartresearch.job.job_bcdb48] Clustering documents
+2025-09-23 22:48:19 | INFO     | [smartresearch.job.job_bcdb48] Clustering done: k=1
+2025-09-23 22:48:19 | INFO     | [smartresearch.job.job_bcdb48] Job finished successfully

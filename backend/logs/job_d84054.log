@@ -1,0 +1,20 @@
+2025-09-23 23:39:31 | INFO     | smartresearch.job.job_d84054 | Starting job with 1 files
+2025-09-23 23:39:31 | INFO     | smartresearch.job.job_d84054 | [1/1] approaches_to_evaluation_of_research_and_development_in_agriculture_a_case_study_of_rice_productivity_in_siripongsaroj_2001.pdf (file_id=2304cb58)
+2025-09-23 23:39:39 | INFO     | smartresearch.job.job_d84054 | Summary length=418 chars
+2025-09-23 23:39:39 | INFO     | smartresearch.job.job_d84054 | Clustering with BERTopic
+2025-09-23 23:40:13 | ERROR    | smartresearch.job.job_d84054 | Job failed: Transform unavailable when model was fit with only a single data sample.
+Traceback (most recent call last):
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\jobs.py", line 103, in run_job
+    bt = build_topics_bertopic(texts_for_topics, model_name="all-MiniLM-L6-v2", min_cluster_size=3)
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\topic_bertopic.py", line 68, in build_topics_bertopic
+    topics, _ = topic_model.fit_transform(clean_texts)
+                ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\bertopic\_bertopic.py", line 472, in fit_transform
+    umap_embeddings = self._reduce_dimensionality(embeddings, y)
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\bertopic\_bertopic.py", line 3798, in _reduce_dimensionality
+    umap_embeddings = self.umap_model.transform(embeddings)
+  File "C:\Users\awad\Desktop\smartresearch\backend\.venv\Lib\site-packages\umap\umap_.py", line 2972, in transform
+    raise ValueError(
+        "Transform unavailable when model was fit with only a single data sample."
+    )
+ValueError: Transform unavailable when model was fit with only a single data sample.

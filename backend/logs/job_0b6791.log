@@ -1,0 +1,14 @@
+2025-09-24 17:30:27 | INFO     | smartresearch.job.job_0b6791 | Starting job with 5 files
+2025-09-24 17:30:27 | INFO     | smartresearch.job.job_0b6791 | [1/5] disseminating_the_outcomes_of_educational_research_to_inform_mathematics_teachers_practices_hood_2009.pdf (file_id=203fa4c4)
+2025-09-24 17:30:34 | INFO     | smartresearch.job.job_0b6791 | Summary length=457 chars
+2025-09-24 17:30:34 | INFO     | smartresearch.job.job_0b6791 | [2/5] industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984_712a75.pdf (file_id=9609652a)
+2025-09-24 17:30:41 | INFO     | smartresearch.job.job_0b6791 | Summary length=409 chars
+2025-09-24 17:30:41 | INFO     | smartresearch.job.job_0b6791 | [3/5] quality_appraisal_of_higher_education_research_an_action-oriented_process-based_alternative_to_curtis_1996.pdf (file_id=e087f57e)
+2025-09-24 17:30:47 | INFO     | smartresearch.job.job_0b6791 | Summary length=478 chars
+2025-09-24 17:30:47 | INFO     | smartresearch.job.job_0b6791 | [4/5] research_and_development_structures_within_the_australian_wine_industry_organizational_implications_aylward_2008_45f52e.pdf (file_id=f4dd6b6b)
+2025-09-24 17:30:53 | INFO     | smartresearch.job.job_0b6791 | Summary length=459 chars
+2025-09-24 17:30:53 | INFO     | smartresearch.job.job_0b6791 | [5/5] role_of_public_policy_in_linking_university_and_research_centres_with_industry_in_sri_lanka_amaradasa_2004.pdf (file_id=64f93ab2)
+2025-09-24 17:31:00 | INFO     | smartresearch.job.job_0b6791 | Summary length=468 chars
+2025-09-24 17:31:00 | INFO     | smartresearch.job.job_0b6791 | Clustering backend selected: sklearn (n_docs=5)
+2025-09-24 17:31:02 | INFO     | smartresearch.job.job_0b6791 | Clustering done: k=5
+2025-09-24 17:31:02 | INFO     | smartresearch.job.job_0b6791 | sklearn clustering finished: k=5
