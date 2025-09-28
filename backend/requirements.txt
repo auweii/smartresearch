@@ -9,3 +9,7 @@ scikit-learn
 transformers
 sentencepiece
 torch
+bertopic
+sentence-transformers
+hdbscan
+umap-learn

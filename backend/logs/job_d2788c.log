@@ -1,0 +1,9 @@
+2025-09-23 22:50:18 | INFO     | [smartresearch.job.job_d2788c] Starting job with 1 files
+2025-09-23 22:50:18 | DEBUG    | [smartresearch.job.job_d2788c] payload={'file_ids': ['8e97b356'], 'max_pages': 40, 'num_topics': 8, 'cluster_k': None, 'summary_chars': 900, 'section_mode': 'abstract', 'section_label': 'introduction', 'use_abstractive': True, 'abstract_scan_pages': 25}
+2025-09-23 22:50:18 | INFO     | [smartresearch.job.job_d2788c] [1/1] approaches_to_evaluation_of_research_and_development_in_agriculture_a_case_study_of_rice_productivity_in_siripongsaroj_2001.pdf (file_id=8e97b356)
+2025-09-23 22:50:21 | DEBUG    | [smartresearch.job.job_d2788c] Extracted 2348 chars
+2025-09-23 22:50:27 | INFO     | [smartresearch.job.job_d2788c] Summary length=418 chars
+2025-09-23 22:50:27 | INFO     | [smartresearch.job.job_d2788c] Building topic model (sklearn LDA)
+2025-09-23 22:50:27 | INFO     | [smartresearch.job.job_d2788c] Clustering documents
+2025-09-23 22:50:27 | INFO     | [smartresearch.job.job_d2788c] Clustering done: k=1
+2025-09-23 22:50:27 | INFO     | [smartresearch.job.job_d2788c] Job finished successfully

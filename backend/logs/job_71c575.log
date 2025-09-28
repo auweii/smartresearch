@@ -1,0 +1,38 @@
+2025-09-24 20:33:55 | INFO     | smartresearch.job.job_71c575 | Starting job with 10 files
+2025-09-24 20:33:55 | INFO     | smartresearch.job.job_71c575 | [1/10] action_research_as_a_professional_development_model_for_the_teaching_of_writing_in_early_stage_one_stage_kervin_2004.pdf (file_id=ca58c7ef)
+2025-09-24 20:34:03 | INFO     | smartresearch.job.job_71c575 | Summary length=592 chars
+2025-09-24 20:34:03 | INFO     | smartresearch.job.job_71c575 | [2/10] approaches_to_evaluation_of_research_and_development_in_agriculture_a_case_study_of_rice_productivity_in_siripongsaroj_2001.pdf (file_id=498a1255)
+2025-09-24 20:34:12 | INFO     | smartresearch.job.job_71c575 | Summary length=418 chars
+2025-09-24 20:34:12 | INFO     | smartresearch.job.job_71c575 | [3/10] disseminating_the_outcomes_of_educational_research_to_inform_mathematics_teachers_practices_hood_2009.pdf (file_id=ff973f8f)
+2025-09-24 20:34:18 | INFO     | smartresearch.job.job_71c575 | Summary length=457 chars
+2025-09-24 20:34:18 | INFO     | smartresearch.job.job_71c575 | [4/10] industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984.pdf (file_id=1bb5cdd1)
+2025-09-24 20:34:25 | INFO     | smartresearch.job.job_71c575 | Summary length=409 chars
+2025-09-24 20:34:25 | INFO     | smartresearch.job.job_71c575 | [5/10] quality_appraisal_of_higher_education_research_an_action-oriented_process-based_alternative_to_curtis_1996.pdf (file_id=bc8f4ac4)
+2025-09-24 20:34:31 | INFO     | smartresearch.job.job_71c575 | Summary length=478 chars
+2025-09-24 20:34:32 | INFO     | smartresearch.job.job_71c575 | [6/10] research_and_development_structures_within_the_australian_wine_industry_organizational_implications_aylward_2008.pdf (file_id=6157e578)
+2025-09-24 20:34:38 | INFO     | smartresearch.job.job_71c575 | Summary length=459 chars
+2025-09-24 20:34:38 | INFO     | smartresearch.job.job_71c575 | [7/10] role_of_public_policy_in_linking_university_and_research_centres_with_industry_in_sri_lanka_amaradasa_2004.pdf (file_id=55d24820)
+2025-09-24 20:34:45 | INFO     | smartresearch.job.job_71c575 | Summary length=468 chars
+2025-09-24 20:34:45 | INFO     | smartresearch.job.job_71c575 | [8/10] the_importance_of_information_systems_in_inter-sectoral_r_and_d_collaboration_the_case_of_the_australian_co-_nurharyoko_2005.pdf (file_id=a285522b)
+2025-09-24 20:34:50 | INFO     | smartresearch.job.job_71c575 | Summary length=364 chars
+2025-09-24 20:34:50 | INFO     | smartresearch.job.job_71c575 | [9/10] the_influence_of_the_mode_of_plasma_generation_on_the_plasma_nitriding_behaviour_of_a_micoralloyed_i_e_mahboubi_1998.pdf (file_id=1e7d8822)
+2025-09-24 20:34:52 | WARNING  | smartresearch.job.job_71c575 | No section text found; falling back to full-text extract
+2025-09-24 20:34:59 | INFO     | smartresearch.job.job_71c575 | Summary length=260 chars
+2025-09-24 20:34:59 | INFO     | smartresearch.job.job_71c575 | [10/10] the_study_of_fossil_faunas_in_the_walanae_basin_indonesia_suyono_2009_14dacf.pdf (file_id=ed40b665)
+2025-09-24 20:35:07 | INFO     | smartresearch.job.job_71c575 | Summary length=412 chars
+2025-09-24 20:35:07 | INFO     | smartresearch.job.job_71c575 | Clustering backend selected: bertopic (n_docs=10)
+2025-09-24 20:35:16 | ERROR    | smartresearch.job.job_71c575 | Job failed: BERTopic.__init__() got an unexpected keyword argument 'cluster_model'
+Traceback (most recent call last):
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\jobs.py", line 166, in run_job
+    bt = build_topics_bertopic(
+        texts_for_topics,
+        model_name="all-MiniLM-L6-v2",
+        min_topic_size=3,
+    )
+  File "C:\Users\awad\Desktop\smartresearch\backend\smartresearch_backend\services\topic_bertopic.py", line 100, in build_topics_bertopic
+    topic_model = BERTopic(
+        embedding_model=embedder,
+    ...<6 lines>...
+        min_topic_size=max(min_topic_size, 2),
+    )
+TypeError: BERTopic.__init__() got an unexpected keyword argument 'cluster_model'

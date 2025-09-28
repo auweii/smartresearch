@@ -19,7 +19,8 @@ class JobStart(BaseModel):
     section_mode: Literal["full", "abstract", "section"] = "abstract"
     section_label: Optional[str] = None
     use_abstractive: bool = True
-    abstract_scan_pages: int = 25   # 👈 new
+    abstract_scan_pages: int = 25
+    cluster_backend: Literal["auto", "sklearn", "bertopic"] = "auto"   # bertopic added
 
 class JobStatus(BaseModel):
     job_id: str

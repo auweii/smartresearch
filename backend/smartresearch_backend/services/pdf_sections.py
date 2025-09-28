@@ -7,7 +7,7 @@ import fitz  # PyMuPDF
 # stop when we hit a typical next-heading
 _HEADING_STOP = re.compile(
     r"(?im)^\s*(\d+[\.\)]\s+)?("
-    r"introduction|background|related work|literature review|methods?|methodology|"
+    r"related work|literature review|methods?|methodology|"
     r"materials and methods|results|experiments?|analysis|discussion|conclusion|"
     r"conclusions|summary|acknowledg(e)?ments?|keywords?|references|bibliography|appendix"
     r")\s*$"
@@ -15,7 +15,7 @@ _HEADING_STOP = re.compile(
 
 # accepted variants for "Abstract"
 _ABS_LABELS = [
-    r"abstract", r"extended abstract", r"executive summary", r"summary", r"summaries"
+    r"abstract", r"extended abstract", r"executive summary", r"summary", r"summaries", r"introduction"
 ]
 
 def _norm(s: str) -> str:

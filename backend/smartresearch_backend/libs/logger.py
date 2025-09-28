@@ -1,48 +1,42 @@
-import logging, sys, os
-from logging.handlers import RotatingFileHandler
+import logging
+import sys
 from pathlib import Path
 
-ROOT_LOGGER_NAME = "smartresearch"
-LOG_DIR = Path(__file__).resolve().parents[2] / "logs"   # backend/logs
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR = Path("logs")
+LOG_DIR.mkdir(exist_ok=True)
 
-# Base logger (console)
-_base = logging.getLogger(ROOT_LOGGER_NAME)
-_base.setLevel(logging.DEBUG)
-if not _base.handlers:
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
-    fmt = logging.Formatter("%(asctime)s | %(levelname)-8s | %(message)s", "%Y-%m-%d %H:%M:%S")
-    ch.setFormatter(fmt)
-    _base.addHandler(ch)
+# Main global logger
+logger = logging.getLogger("smartresearch")
+logger.setLevel(logging.DEBUG)
 
-# Quiet some chatty deps
-logging.getLogger("uvicorn").setLevel(logging.WARNING)
-logging.getLogger("transformers").setLevel(logging.WARNING)
+# Console handler
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    "%Y-%m-%d %H:%M:%S"
+)
+ch.setFormatter(formatter)
 
-def job_logger(job_id: str) -> tuple[logging.Logger, logging.Handler, str]:
-    """
-    Create/return a child logger and a file handler for this job_id.
-    Returns (logger, handler, logfile_path). You MUST remove the handler when done.
-    """
-    logger = logging.getLogger(f"{ROOT_LOGGER_NAME}.job.{job_id}")
-    logger.setLevel(logging.DEBUG)
+# Add handler if not already added
+if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+    logger.addHandler(ch)
 
-    logfile = LOG_DIR / f"{job_id}.log"
-    fh = RotatingFileHandler(logfile, maxBytes=2_000_000, backupCount=3, encoding="utf-8")
-    fmt = logging.Formatter("%(asctime)s | %(levelname)-8s | [%(name)s] %(message)s", "%Y-%m-%d %H:%M:%S")
-    fh.setFormatter(fmt)
-    fh.setLevel(logging.DEBUG)
+# Per-job loggers
+def job_logger(job_id: str) -> logging.Logger:
+    job_log = logging.getLogger(f"smartresearch.job.{job_id}")
+    if not job_log.handlers:
+        fh = logging.FileHandler(LOG_DIR / f"{job_id}.log", encoding="utf-8")
+        fh.setLevel(logging.INFO)
+        fh.setFormatter(formatter)
+        job_log.addHandler(fh)
+    job_log.setLevel(logging.INFO)
+    return job_log
 
-    # attach once per call; caller must remove when finished
-    logger.addHandler(fh)
-    logger.propagate = True  # also echo to console via base
+def remove_handler(job_id: str):
+    job_log = logging.getLogger(f"smartresearch.job.{job_id}")
+    for h in job_log.handlers[:]:
+        job_log.removeHandler(h)
+        h.close()
 
-    return logger, fh, str(logfile)
-
-def remove_handler(logger: logging.Logger, handler: logging.Handler) -> None:
-    try:
-        logger.removeHandler(handler)
-        handler.close()
-    except Exception:
-        pass
+__all__ = ["logger", "job_logger", "remove_handler"]

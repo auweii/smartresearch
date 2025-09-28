@@ -1,0 +1,6 @@
+2025-09-23 23:38:37 | INFO     | smartresearch.job.job_1be4b4 | Starting job with 1 files
+2025-09-23 23:38:37 | INFO     | smartresearch.job.job_1be4b4 | [1/1] disseminating_the_outcomes_of_educational_research_to_inform_mathematics_teachers_practices_hood_2009.pdf (file_id=b67cb52e)
+2025-09-23 23:38:44 | INFO     | smartresearch.job.job_1be4b4 | Summary length=457 chars
+2025-09-23 23:38:44 | INFO     | smartresearch.job.job_1be4b4 | Clustering with sklearn LDA + KMeans
+2025-09-23 23:38:46 | INFO     | smartresearch.job.job_1be4b4 | Clustering done: k=1
+2025-09-23 23:38:46 | INFO     | smartresearch.job.job_1be4b4 | sklearn clustering finished: k=1

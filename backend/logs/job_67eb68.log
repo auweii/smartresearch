@@ -1,0 +1,24 @@
+2025-09-24 17:31:27 | INFO     | smartresearch.job.job_67eb68 | Starting job with 10 files
+2025-09-24 17:31:27 | INFO     | smartresearch.job.job_67eb68 | [1/10] action_research_as_a_professional_development_model_for_the_teaching_of_writing_in_early_stage_one_stage_kervin_2004_f99a36.pdf (file_id=770ece90)
+2025-09-24 17:31:36 | INFO     | smartresearch.job.job_67eb68 | Summary length=592 chars
+2025-09-24 17:31:36 | INFO     | smartresearch.job.job_67eb68 | [2/10] approaches_to_evaluation_of_research_and_development_in_agriculture_a_case_study_of_rice_productivity_in_siripongsaroj_2001_2819dd.pdf (file_id=5953ad54)
+2025-09-24 17:31:44 | INFO     | smartresearch.job.job_67eb68 | Summary length=418 chars
+2025-09-24 17:31:44 | INFO     | smartresearch.job.job_67eb68 | [3/10] disseminating_the_outcomes_of_educational_research_to_inform_mathematics_teachers_practices_hood_2009_38b9bd.pdf (file_id=a37f84f6)
+2025-09-24 17:31:51 | INFO     | smartresearch.job.job_67eb68 | Summary length=457 chars
+2025-09-24 17:31:51 | INFO     | smartresearch.job.job_67eb68 | [4/10] industrial_research_and_development_and_inventive_activity_in_australian_manufacturing_industries_liyanage_1984_712a75.pdf (file_id=36526b4b)
+2025-09-24 17:31:59 | INFO     | smartresearch.job.job_67eb68 | Summary length=409 chars
+2025-09-24 17:31:59 | INFO     | smartresearch.job.job_67eb68 | [5/10] quality_appraisal_of_higher_education_research_an_action-oriented_process-based_alternative_to_curtis_1996_834e81.pdf (file_id=a82f7d0d)
+2025-09-24 17:32:04 | INFO     | smartresearch.job.job_67eb68 | Summary length=478 chars
+2025-09-24 17:32:04 | INFO     | smartresearch.job.job_67eb68 | [6/10] research_and_development_structures_within_the_australian_wine_industry_organizational_implications_aylward_2008_45f52e.pdf (file_id=3cc3e386)
+2025-09-24 17:32:11 | INFO     | smartresearch.job.job_67eb68 | Summary length=459 chars
+2025-09-24 17:32:11 | INFO     | smartresearch.job.job_67eb68 | [7/10] role_of_public_policy_in_linking_university_and_research_centres_with_industry_in_sri_lanka_amaradasa_2004_4a650d.pdf (file_id=4a02435c)
+2025-09-24 17:32:19 | INFO     | smartresearch.job.job_67eb68 | Summary length=468 chars
+2025-09-24 17:32:19 | INFO     | smartresearch.job.job_67eb68 | [8/10] the_importance_of_information_systems_in_inter-sectoral_r_and_d_collaboration_the_case_of_the_australian_co-_nurharyoko_2005.pdf (file_id=14470106)
+2025-09-24 17:32:24 | INFO     | smartresearch.job.job_67eb68 | Summary length=364 chars
+2025-09-24 17:32:24 | INFO     | smartresearch.job.job_67eb68 | [9/10] the_influence_of_the_mode_of_plasma_generation_on_the_plasma_nitriding_behaviour_of_a_micoralloyed_i_e_mahboubi_1998.pdf (file_id=ccb5f9b8)
+2025-09-24 17:32:26 | WARNING  | smartresearch.job.job_67eb68 | No section text found; falling back to full-text extract
+2025-09-24 17:32:33 | INFO     | smartresearch.job.job_67eb68 | Summary length=260 chars
+2025-09-24 17:32:33 | INFO     | smartresearch.job.job_67eb68 | [10/10] the_study_of_fossil_faunas_in_the_walanae_basin_indonesia_suyono_2009_14dacf.pdf (file_id=76dc493b)
+2025-09-24 17:32:42 | INFO     | smartresearch.job.job_67eb68 | Summary length=412 chars
+2025-09-24 17:32:42 | INFO     | smartresearch.job.job_67eb68 | Clustering backend selected: bertopic (n_docs=10)
+2025-09-24 17:33:02 | INFO     | smartresearch.job.job_67eb68 | BERTopic clustering finished: k=0
