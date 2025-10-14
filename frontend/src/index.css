@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== GLOBAL RESET & BEHAVIOUR ===== */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* 💀 kills global scrollbars */
+  background-color: #fdf8f4; /* soft neutral background */
+  color: #4a2f19;
+  font-family: "Inter", sans-serif;
+}
+
+/* force bronze accent color globally */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #6b3b1a !important;
+}
+
+/* ===== BASIC CUSTOM UTILITY CLASSES ===== */
+
+.btn {
+  @apply inline-flex items-center justify-center font-medium rounded-md transition duration-150 ease-in-out;
+}
+
+.btn-primary {
+  @apply px-4 py-2 bg-bronze-600 text-white hover:bg-bronze-700;
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-white text-bronze-600 border border-bronze-300 hover:bg-bronze-50;
+}
+
+.btn-ghost {
+  @apply px-4 py-2 text-bronze-600 hover:bg-bronze-50;
+}
+
+.field {
+  @apply bg-neutral-50 border border-neutral-300;
+  box-shadow: none;
+}
+
+.field:focus {
+  outline: none;
+  border-color: rgb(197 165 114); /* bronze-400 */
+  box-shadow: 0 0 0 3px rgba(197, 165, 114, 0.35);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.35);
+}
