@@ -21,6 +21,7 @@ It’s the backbone of the local document index, managing the filesystem-based d
 ---
 
 ## File Structure
+```markdown
 data_store/
 ├── files/
 │ ├── <id>_<filename>.pdf
@@ -28,7 +29,7 @@ data_store/
 │ ├── <id>.txt
 │ ├── <id>.meta.json
 └── index.json
-
+```
 
 Each document ID (e.g. `c8a4f8e3c9b1`) acts as a unique key for its file, extracted text, and metadata.  
 The `index.json` file serves as the global registry for all stored items.
