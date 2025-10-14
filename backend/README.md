@@ -1,5 +1,3 @@
-# SmartResearch — Backend
-
 #  SmartResearch — Backend
 
 The **SmartResearch Backend** powers document ingestion, clustering, summarization, and semantic retrieval for the SmartResearch app.  
