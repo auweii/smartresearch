@@ -1,9 +1,5 @@
+# SmartResearch — Backend
 
----
-
-###  Updated `backend/README.md`
-
-```markdown
 #  SmartResearch — Backend
 
 The **SmartResearch Backend** powers document ingestion, clustering, summarization, and semantic retrieval for the SmartResearch app.  
@@ -23,6 +19,7 @@ It’s built on [FastAPI](https://fastapi.tiangolo.com/) with a modular architec
 ---
 
 ##  Directory Structure
+```markdown
 backend/
 ├── app.py # FastAPI entrypoint
 ├── models/ # Pydantic schemas (data contracts)
@@ -30,6 +27,7 @@ backend/
 ├── utils/storage.py # File and metadata storage layer
 ├── requirements.txt # Python dependencies
 └── data_store/ # Runtime-generated storage
+```
 
 ---
 
@@ -42,12 +40,17 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-Run the API with uvicorn:
+```
 
+Run the API with uvicorn:
+```bash
 uvicorn app:app --reload
+```
 
 Then open Swagger Docs:
+```bash
 http://localhost:8000/docs
+```
 
 ---
 
@@ -68,16 +71,20 @@ http://localhost:8000/docs
 ```bash
 GET /api/health
 → {"ok": true}
-
+```
 ---
 
 Upload a PDF
+```bash
 POST /api/upload
+```
 → Returns parsed text, extracted metadata, and a short preview.
 
 ---
 
 Semantic Search
+```bash
 POST /api/semantic_search
 Body: {"q": "transformer models", "topk": 5}
+```
 → Ranked results with document previews.
