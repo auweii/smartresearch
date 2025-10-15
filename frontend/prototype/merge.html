@@ -1,0 +1,125 @@
+<html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SmartResearch – Merge</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="wrap">
+      <a class="brand" href="upload.html">SmartResearch</a>
+      <div class="links">
+        <a href="upload.html" >Upload</a>
+        <a href="papers.html" >All Papers</a>
+        <a href="cluster.html" >Cluster</a>
+        <a href="export.html" >Export</a>
+        <a href="merge.html" style="background:rgba(255,255,255,.12)">Merge</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <a class="back" href="export.html">← Back</a>
+    <div class="h1">Merge Exports</div>
+    <div class="sub">Review both datasets, see the differences, and merge confidently.</div>
+
+    <div class="grid" id="previews">
+      <div class="card" style="padding:14px 16px">
+        <div class="title" style="font-weight:800">Current Workspace</div>
+        <div id="currStats" class="meta" style="margin:6px 0 10px"></div>
+        <div style="max-height:260px;overflow:auto" id="currList"></div>
+      </div>
+      <div class="card" style="padding:14px 16px">
+        <div class="title" style="font-weight:800">External Export</div>
+        <div id="extStats" class="meta" style="margin:6px 0 10px">No file loaded.</div>
+        <input id="file" type="file" accept="application/json" style="margin-bottom:12px">
+        <div style="max-height:260px;overflow:auto" id="extList"></div>
+      </div>
+      <div class="card" style="padding:14px 16px; grid-column:1 / -1">
+        <div class="title" style="font-weight:800">What Will Change</div>
+        <div id="diff" class="meta">Load a file to preview differences.</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="mergeBtn" class="btn" disabled>Merge into Workspace</button>
+      <button id="exportMerged" class="btn secondary" disabled>Download Merged JSON</button>
+      <a href="export.html" class="btn ghost">Go to Export</a>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const file = document.getElementById('file');
+    const currStats = document.getElementById('currStats');
+    const currList = document.getElementById('currList');
+    const extStats = document.getElementById('extStats');
+    const extList = document.getElementById('extList');
+    const diff = document.getElementById('diff');
+    const mergeBtn = document.getElementById('mergeBtn');
+    const exportBtn = document.getElementById('exportMerged');
+    let external = null;
+    let previewMerged = null;
+
+    function renderWorkspace(){
+      const data = buildExport();
+      currStats.textContent = 'Papers ' + data.papers.length + ' • Summaries ' + Object.keys(data.summaries||{}).length + ' • Clusters ' + (data.clusters?data.clusters.length:0);
+      currList.innerHTML = '<ul style="margin:0 0 0 18px">' + data.papers.map(p=>'<li>'+p.name+'</li>').join('') + '</ul>';
+    }
+
+    function mergeData(base, extra){
+      const papers = [...base.papers];
+      const ids = new Set(papers.map(p=>p.id));
+      (extra.papers||[]).forEach(p=>{ if(!ids.has(p.id)) papers.push(p); });
+      const summaries = Object.assign({}, base.summaries||{});
+      Object.entries(extra.summaries||{}).forEach(([k,v])=>{ if(!summaries[k]) summaries[k]=v; });
+      let clusters = base.clusters ? JSON.parse(JSON.stringify(base.clusters)) : [];
+      (extra.clusters||[]).forEach(ec => { clusters.push({ id: uid(), label: ec.label+' (merged)', paperIds: ec.paperIds||[] }); });
+      return { generatedAt: new Date().toISOString(), papers, summaries, clusters };
+    }
+
+    function renderDiff(base, extra){
+      const baseIds = new Set(base.papers.map(p=>p.id));
+      const extraIds = new Set((extra.papers||[]).map(p=>p.id));
+      const newIds = [...extraIds].filter(id => !baseIds.has(id));
+      const newPapers = (extra.papers||[]).filter(p => newIds.includes(p.id));
+      const sNew = Object.keys(extra.summaries||{}).filter(k => !(base.summaries||{})[k]).length;
+      const cAdded = (extra.clusters||[]).length;
+      diff.textContent = 'New papers ' + newPapers.length + ', new summaries ' + sNew + ', clusters appended ' + cAdded + '.';
+    }
+
+    file.addEventListener('change', async (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const text = await f.text();
+      try{
+        external = JSON.parse(text);
+        extStats.textContent = 'Papers ' + ((external.papers||[]).length) + ' • Summaries ' + (external.summaries ? Object.keys(external.summaries).length : 0) + ' • Clusters ' + ((external.clusters||[]).length);
+        extList.innerHTML = '<ul style="margin:0 0 0 18px">' + ((external.papers||[]).map(p=>'<li>'+p.name+'</li>').join('')) + '</ul>';
+        previewMerged = mergeData(buildExport(), external);
+        renderDiff(buildExport(), external);
+        mergeBtn.disabled = false; exportBtn.disabled = false;
+      }catch(err){
+        extStats.textContent = 'Invalid JSON.'; external = null; mergeBtn.disabled = true; exportBtn.disabled = true; diff.textContent='';
+      }
+    });
+
+    mergeBtn.addEventListener('click', ()=>{
+      if(!external) return;
+      setPapers(previewMerged.papers);
+      setSummaries(previewMerged.summaries);
+      setClusters(previewMerged.clusters);
+      window.location.href = 'export.html';
+    });
+
+    exportBtn.addEventListener('click', ()=>{
+      if(!external) return;
+      downloadBlob('smartresearch_merged.json', JSON.stringify(previewMerged, null, 2));
+    });
+
+    renderWorkspace();
+  </script>
+</body>
+</html>

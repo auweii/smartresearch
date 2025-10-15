@@ -1,0 +1,63 @@
+< html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SmartResearch – Export</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="wrap">
+      <a class="brand" href="upload.html">SmartResearch</a>
+      <div class="links">
+        <a href="upload.html" >Upload</a>
+        <a href="papers.html" >All Papers</a>
+        <a href="cluster.html" >Cluster</a>
+        <a href="export.html" style="background:rgba(255,255,255,.12)">Export</a>
+        <a href="merge.html" >Merge</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <a class="back" href="cluster.html">← Back</a>
+    <div class="h1">Export Results</div>
+    <div class="sub">Download as JSON or create a printable PDF report.</div>
+
+    <div class="actions">
+      <button id="jsonBtn" class="btn">Export as JSON</button>
+      <a href="report.html" class="btn secondary">Generate PDF Report</a>
+      <a href="merge.html" class="btn ghost">Merge Exports</a>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="kv"><div>Total Papers</div><div id="countP"></div></div>
+      <div class="kv"><div>Has Summaries</div><div id="countS"></div></div>
+      <div class="kv"><div>Clusters</div><div id="countC"></div></div>
+    </div>
+    <div class="notice">PDF opens a printer view; choose Save as PDF.</div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const countP = document.getElementById('countP');
+    const countS = document.getElementById('countS');
+    const countC = document.getElementById('countC');
+    document.getElementById('jsonBtn').addEventListener('click', ()=>{
+      const data = buildExport();
+      downloadBlob('smartresearch_export.json', JSON.stringify(data, null, 2));
+    });
+    function refreshCounts(){
+      const papers = getPapers();
+      const summaries = getSummaries();
+      const clusters = getClusters();
+      countP.textContent = papers.length;
+      countS.textContent = Object.keys(summaries).length;
+      countC.textContent = clusters ? clusters.length : 0;
+    }
+    refreshCounts();
+  </script>
+</body>
+</html>

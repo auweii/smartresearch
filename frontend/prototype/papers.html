@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SmartResearch – All Papers</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="wrap">
+      <a class="brand" href="upload.html">SmartResearch</a>
+      <div class="links">
+        <a href="upload.html" >Upload</a>
+        <a href="papers.html" style="background:rgba(255,255,255,.12)">All Papers</a>
+        <a href="cluster.html" >Cluster</a>
+        <a href="export.html" >Export</a>
+        <a href="merge.html" >Merge</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <a class="back" href="upload.html">← Back</a>
+    <div class="h1">All Uploaded Papers</div>
+    <div class="sub">Generate long summaries before clustering. Titles are listed below.</div>
+
+    <div id="papers" class="card" style="padding:8px 0"></div>
+
+    <div class="actions">
+      <button id="summaryBtn" class="btn">Generate Summaries</button>
+      <a class="btn secondary" href="cluster.html">Next ➜ Cluster</a>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const container = document.getElementById('papers');
+    const btn = document.getElementById('summaryBtn');
+    function render(){
+      const papers = getPapers();
+      const summaries = getSummaries();
+      container.innerHTML = '';
+      if(papers.length === 0){
+        container.innerHTML = '<div style="padding:14px 16px;color:var(--muted)">No papers yet. Go to Upload.</div>';
+        btn.disabled = true;
+        return;
+      }
+      btn.disabled = false;
+      papers.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.className = 'kv';
+        const left = document.createElement('div');
+        left.innerHTML = '<div class="title">'+p.name+'</div>' + (summaries[p.id] ? '<div class="meta">'+summaries[p.id]+'</div>': '<div class="meta">No summary yet.</div>');
+        const right = document.createElement('div');
+        right.className = 'status';
+        right.innerHTML = summaries[p.id] ? '<span class="badge ok">Summarised</span>' : '<span class="badge">Pending</span>';
+        const del = document.createElement('button'); del.className='icon-btn'; del.innerHTML='×'; del.title='Remove';
+        del.addEventListener('click', ()=>{ if(confirm('Remove this paper?')){ deletePaper(p.id); render(); } });
+        right.appendChild(del);
+        row.appendChild(left);
+        row.appendChild(right);
+        container.appendChild(row);
+      });
+    }
+    document.getElementById('summaryBtn').addEventListener('click', ()=>{
+      const papers = getPapers(); const s = getSummaries();
+      papers.forEach((p, idx) => s[p.id] = s[p.id] || longSummaryFor(p.name, idx));
+      setSummaries(s); render();
+    });
+    render();
+  </script>
+</body>
+</html>

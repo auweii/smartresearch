@@ -1,0 +1,122 @@
+<html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SmartResearch – Upload</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="wrap">
+      <a class="brand" href="upload.html">SmartResearch</a>
+      <div class="links">
+        <a href="upload.html" style="background:rgba(255,255,255,.12)">Upload</a>
+        <a href="papers.html" >All Papers</a>
+        <a href="cluster.html" >Cluster</a>
+        <a href="export.html" >Export</a>
+        <a href="merge.html" >Merge</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <a class="back" href="export.html">← Back</a>
+    <div class="h1">Upload PDFs</div>
+    <div class="sub">PDF only. Click to choose, or drag and drop. Up to 10.</div>
+
+    <label id="drop" class="drop card" for="fileInput">
+      <input id="fileInput" type="file" accept="application/pdf" multiple/>
+      <div style="font-size:48px; margin-bottom:8px">📁</div>
+      <div style="font-weight:800;font-size:22px">Select or Drop Files</div>
+      <div class="notice">Files are stored in browser for this prototype. Progress is simulated.</div>
+    </label>
+
+    <div class="actions">
+      <button id="reupload" class="btn ghost">↻ Re upload</button>
+    </div>
+
+    <div id="list" class="card" style="margin-top:16px">
+      <div style="padding:14px 16px;color:var(--muted)">No files yet.</div>
+    </div>
+
+    <div class="footer-nav">
+      <a class="back" href="papers.html">← Back</a>
+      <a class="btn secondary" href="papers.html" title="Go to All Papers">Next ➜</a>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const drop = document.getElementById('drop');
+    const input = document.getElementById('fileInput');
+    const list = document.getElementById('list');
+    const reupload = document.getElementById('reupload');
+
+    let pending = []; // temp uploads
+
+    function render(){
+      list.innerHTML = '';
+      const papers = getPapers();
+      function addRow(item, statusHTML){
+        const row = document.createElement('div');
+        row.className = 'kv';
+        const name = document.createElement('div'); name.className='name'; name.textContent=item.name;
+        const right = document.createElement('div'); right.className='status'; right.innerHTML = statusHTML;
+        row.appendChild(name); row.appendChild(right); list.appendChild(row);
+      }
+      papers.forEach(p => {
+        const del = '<button class="icon-btn" title="Remove" data-del="'+p.id+'">×</button>';
+        addRow(p, '<span class="badge ok">Completed</span>'+del);
+      });
+      pending.forEach(p => { addRow(p, '<div class="progress"><div class="bar" style="width:'+p.progress+'%"></div></div>'); });
+      list.querySelectorAll('[data-del]').forEach(btn => {
+        btn.addEventListener('click', (e)=>{
+          const id = e.target.getAttribute('data-del');
+          if(confirm('Remove this file?')){ deletePaper(id); render(); }
+        });
+      });
+      if(papers.length===0 && pending.length===0){
+        list.innerHTML = '<div style="padding:14px 16px;color:var(--muted)">No files yet.</div>';
+      }
+    }
+
+    function queue(files){
+      let papers = getPapers();
+      const remaining = Math.max(0, MAX_FILES - papers.length - pending.length);
+      const pdfs = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')).slice(0, remaining);
+      if(pdfs.length === 0){ alert('Limit reached (max 10).'); return; }
+
+      pdfs.forEach((f, idx) => {
+        const tmp = { id: uid(), name: f.name, size: f.size, progress: 0, status:'uploading' };
+        pending.push(tmp);
+        const tick = () => {
+          if(tmp.progress >= 100) return;
+          tmp.progress = Math.min(100, tmp.progress + 8 + Math.floor(Math.random()*12));
+          render();
+          if(tmp.progress < 100){ setTimeout(tick, 120); }
+          else {
+            pending = pending.filter(x => x.id !== tmp.id);
+            papers = getPapers(); papers.push({ id: tmp.id, name: tmp.name, size: tmp.size });
+            setPapers(papers); render();
+          }
+        };
+        setTimeout(tick, 200 + idx*150);
+      });
+      render();
+    }
+
+    input.addEventListener('change', e => queue(e.target.files));
+    ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e=>{e.preventDefault(); drop.classList.add('dragover');}));
+    ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e=>{drop.classList.remove('dragover');}));
+    drop.addEventListener('drop', e => { e.preventDefault(); queue(e.dataTransfer.files); });
+
+    reupload.addEventListener('click', ()=>{
+      setPapers([]); setSummaries({}); setClusters(null); pending=[]; render(); input.click();
+    });
+
+    render();
+  </script>
+</body>
+</html>

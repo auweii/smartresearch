@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SmartResearch – Cluster</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="wrap">
+      <a class="brand" href="upload.html">SmartResearch</a>
+      <div class="links">
+        <a href="upload.html" >Upload</a>
+        <a href="papers.html" >All Papers</a>
+        <a href="cluster.html" style="background:rgba(255,255,255,.12)">Cluster</a>
+        <a href="export.html" >Export</a>
+        <a href="merge.html" >Merge</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <a class="back" href="papers.html">← Back</a>
+    <div class="h1">Clustering</div>
+    <div class="sub">Select which papers to include, then cluster into topic groups. Cards use tables and trimmed summaries.</div>
+
+    <div id="pre" class="card" style="padding:10px 16px"></div>
+
+    <div class="actions">
+      <button id="clusterBtn" class="btn">Cluster Selected</button>
+      <a class="btn secondary" href="export.html">Next ➜ Export</a>
+    </div>
+
+    <hr class="sep"/>
+
+    <div id="clusters" class="grid"></div>
+  </div>
+
+  <div id="modal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+      <div class="head">
+        <div id="m-title" class="title">Cluster</div>
+        <div id="m-close" class="close-x">×</div>
+      </div>
+      <div class="body">
+        <div id="m-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const btn = document.getElementById('clusterBtn');
+    const pre = document.getElementById('pre');
+    const grid = document.getElementById('clusters');
+    const modal = document.getElementById('modal');
+    const mClose = document.getElementById('m-close');
+    const mList = document.getElementById('m-list');
+    let papers = getPapers();
+    let clusters = getClusters();
+    let summaries = getSummaries();
+    let selected = new Set(papers.map(p => p.id));
+
+    function renderPre(){
+      pre.innerHTML = '';
+      if(papers.length === 0){ pre.innerHTML = '<div class="meta">No papers yet.</div>'; return; }
+      papers.forEach(p => {
+        const row = document.createElement('div'); row.className='kv';
+        const left = document.createElement('div');
+        left.innerHTML = '<label style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-id="'+p.id+'" '+(selected.has(p.id)?'checked':'')+'> <span class="name">'+p.name+'</span></label>';
+        const right = document.createElement('div'); right.className='status';
+        right.innerHTML = '<span class="badge">'+(summaries[p.id] ? 'Has summary' : 'No summary')+'</span>';
+        row.appendChild(left); row.appendChild(right); pre.appendChild(row);
+      });
+      pre.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        cb.addEventListener('change', (e)=>{
+          const id = e.target.getAttribute('data-id');
+          if(e.target.checked) selected.add(id); else selected.delete(id);
+        });
+      });
+    }
+
+    function truncate(text, words=40){
+      const parts = (text||'').split(/\s+/); 
+      return parts.length<=words ? text : parts.slice(0,words).join(' ') + ' …';
+    }
+
+    function openModal(cluster){
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      document.getElementById('m-title').textContent = cluster.label;
+      mList.innerHTML = '';
+      const all = getClusters();
+      const otherClusters = all.filter(c => c.id !== cluster.id);
+      cluster.paperIds.forEach(pid => {
+        const p = papers.find(x => x.id === pid);
+        if(!p) return;
+        const row = document.createElement('div');
+        row.className = 'kv';
+        const left = document.createElement('div');
+        left.innerHTML = '<div class="title">'+p.name+'</div><div class="meta">'+truncate(summaries[pid] || 'No summary', 60)+'</div>';
+        const right = document.createElement('div'); right.className='status';
+        const sel = document.createElement('select'); sel.className='move-select';
+        const o0=document.createElement('option'); o0.value=''; o0.textContent='Move to…'; sel.appendChild(o0);
+        otherClusters.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.label; sel.appendChild(o); });
+        sel.addEventListener('change', ()=>{
+          if(!sel.value) return;
+          if(confirm('Mark as incorrectly clustered and move?')){
+            movePaperToCluster(pid, sel.value);
+            papers = getPapers(); clusters = getClusters();
+            const fresh = clusters.find(c => c.id === cluster.id);
+            openModal(fresh || cluster); render();
+          } else sel.value='';
+        });
+        const del = document.createElement('button'); del.className='icon-btn'; del.innerHTML='×'; del.title='Delete paper';
+        del.addEventListener('click', ()=>{
+          if(confirm('Are you sure you want to delete this paper from the workspace?')){
+            deletePaper(pid);
+            papers = getPapers(); clusters = getClusters();
+            const fresh = clusters ? clusters.find(c => c.id === cluster.id) : null;
+            if(fresh) openModal(fresh); else closeModal();
+            render();
+          }
+        });
+        right.appendChild(sel); right.appendChild(del);
+        row.appendChild(left); row.appendChild(right);
+        mList.appendChild(row);
+      });
+    }
+    function closeModal(){ modal.style.display = 'none'; document.body.style.overflow = ''; }
+    mClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+
+    function render(){
+      grid.innerHTML = '';
+      papers = getPapers(); clusters = getClusters(); summaries = getSummaries();
+      renderPre();
+      if(!clusters){ grid.innerHTML = '<div class="notice" style="grid-column:1/-1">No clusters yet.</div>'; return; }
+      clusters.forEach(c => {
+        const card = document.createElement('div'); card.className='card paper'; card.style.cursor='pointer';
+        const title = document.createElement('div'); title.className='title'; title.textContent = c.label + ' (' + c.paperIds.length + ')';
+        const table = document.createElement('table'); table.className='table';
+        table.innerHTML = '<thead><tr><th>Title</th><th>Summary</th></tr></thead><tbody></tbody>';
+        const tbody = table.querySelector('tbody');
+        c.paperIds.forEach(id => {
+          const p = papers.find(x => x.id === id); if(!p) return;
+          const tr = document.createElement('tr');
+          const td1 = document.createElement('td'); td1.textContent = p.name;
+          const td2 = document.createElement('td'); td2.innerHTML = '<div class="summary-trunc">'+truncate(summaries[id] || 'No summary', 50)+'</div>';
+          tr.appendChild(td1); tr.appendChild(td2);
+          tbody.appendChild(tr);
+        });
+        card.appendChild(title); card.appendChild(table);
+        card.addEventListener('click', ()=> openModal(c));
+        grid.appendChild(card);
+      });
+    }
+
+    btn.addEventListener('click', ()=>{
+      const all = getPapers().filter(p => selected.has(p.id));
+      if(all.length === 0){ alert('Select at least one paper.'); return; }
+      const c = fakeCluster(all); setClusters(c);
+      const s = getSummaries(); all.forEach((p,idx) => s[p.id] = s[p.id] || longSummaryFor(p.name, idx)); setSummaries(s);
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>

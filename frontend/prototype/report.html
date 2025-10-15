@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SmartResearch – Report</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="container report">
+    <h1>SmartResearch Report</h1>
+    <div class="muted">Generated at <span id="gen"></span></div>
+    <hr class="sep"/>
+
+    <h2>Generated Summaries</h2>
+    <div id="summaries"></div>
+
+    <h2 style="margin-top:22px">Clusters</h2>
+    <div id="clusters"></div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const data = buildExport();
+    document.getElementById('gen').textContent = new Date(data.generatedAt).toLocaleString();
+
+    const sWrap = document.getElementById('summaries');
+    const papers = data.papers;
+    const summaries = data.summaries || {};
+    papers.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'card'; card.style.margin='10px 0'; card.style.padding='10px 12px';
+      card.innerHTML = '<div style="font-weight:700">'+p.name+'</div><div>'+ (summaries[p.id]||'No summary') +'</div>';
+      sWrap.appendChild(card);
+    });
+
+    const cWrap = document.getElementById('clusters');
+    const clusters = data.clusters || [];
+    clusters.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'card'; card.style.margin='10px 0'; card.style.padding='10px 12px';
+      let html = '<div style="font-weight:800;margin-bottom:6px">'+c.label+'</div>';
+      html += '<table><thead><tr><th>Title</th><th>Summary</th></tr></thead><tbody>';
+      c.paperIds.forEach(id => {
+        const p = papers.find(x => x.id === id);
+        html += '<tr><td>'+ (p ? p.name : id) +'</td><td>'+ (summaries[id] || '—') +'</td></tr>';
+      });
+      html += '</tbody></table>';
+      card.innerHTML = html;
+      cWrap.appendChild(card);
+    });
+
+    setTimeout(()=>window.print(), 300);
+  </script>
+</body>
+</html>
