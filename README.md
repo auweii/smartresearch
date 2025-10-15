@@ -30,7 +30,7 @@ data/ → Local storage for uploaded PDFs (runtime-generated)
 
 ---
 
-## 🖥️System Overview
+## System Overview
 
 **Architecture:**
 ```markdown
