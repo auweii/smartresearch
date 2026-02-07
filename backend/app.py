@@ -97,56 +97,142 @@ def docs_list():
         enriched.append({**d, "summary": summary})
     return enriched
 
+from collections import defaultdict
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 @app.get("/api/clustered")
 def get_clusters():
-    """temporary mock clusters for frontend testing"""
-    return [
-        {
-            "id": "cluster-1",
-            "title": "Transformer Models for Text Summarization",
-            "authors": [
-                "Ashish Vaswani",
-                "Noam Shazeer",
-                "Niki Parmar",
-                "Jakob Uszkoreit",
-                "Lukasz Kaiser",
-            ],
-            "count": 12,
-            "description": "Papers related to language models and summarization.",
-        },
-        {
-            "id": "cluster-2",
-            "title": "Natural Language Processing Foundations",
-            "authors": ["Tom Brown", "Sam Altman", "Alec Radford"],
-            "count": 7,
-            "description":
-                "Focuses on NLP techniques, tokenization, embeddings, and contextual learning in large language models.",
-        },
-        {
-            "id": "cluster-3",
-            "title": "Explainable AI and Model Interpretability",
-            "authors": ["Cynthia Rudin", "Marco Tulio Ribeiro", "Sameer Singh"],
-            "count": 9,
-            "description":
-                "Research on transparency, model interpretability, and trust in machine learning pipelines.",
-        },
-        {
-            "id": "cluster-4",
-            "title": "Cybersecurity Threat Detection",
-            "authors": ["Ross Anderson", "Bruce Schneier", "Gene Spafford"],
-            "count": 10,
-            "description":
-                "Detection of anomalies, intrusion patterns, and adversarial resilience in cyber defense systems.",
-        },
-        {
-            "id": "cluster-5",
-            "title": "Federated Learning and Privacy",
-            "authors": ["Jakub Konečný", "H. Brendan McMahan", "Daniel Ramage"],
-            "count": 11,
-            "description":
-                "Distributed learning approaches preserving data privacy and improving model generalization.",
-        },
-    ]
+    semantic.ensure_loaded()
+
+    chunk_ids = list(getattr(semantic, "_ids", []))
+    X = getattr(semantic, "_vecs", None)
+    lookup = getattr(semantic, "_doc_lookup", {})  # chunk_id -> doc_id
+
+    if X is None or len(chunk_ids) == 0 or X.shape[0] == 0:
+        return []
+
+    # docs that exist in your store
+    docs = {d["id"]: d for d in list_docs()}
+
+    # group chunk row indices by doc_id
+    doc_to_rows = defaultdict(list)
+    for i, cid in enumerate(chunk_ids):
+        did = lookup.get(cid, cid.split("::")[0])
+        if did in docs:
+            doc_to_rows[did].append(i)
+
+    doc_ids = [did for did, rows in doc_to_rows.items() if rows]
+    if len(doc_ids) == 0:
+        return []
+
+    # doc-level vectors = mean of that doc's chunk vectors
+    X_doc = np.vstack([X[doc_to_rows[did]].mean(axis=0) for did in doc_ids])
+
+    # kmeans can't have more clusters than docs
+    target_k = 5
+    k = min(target_k, len(doc_ids))
+    if k <= 1:
+        did = doc_ids[0]
+        text = get_text(did) or ""
+        keywords = []
+
+        if text.strip():
+            vect = TfidfVectorizer(
+                lowercase=True,
+                stop_words="english",
+                token_pattern=r"(?u)\b[a-zA-Z][a-zA-Z\-]{2,}\b",
+                ngram_range=(1, 2),
+                max_features=20000,
+            )
+            tfidf = vect.fit_transform([text])
+            vocab = vect.get_feature_names_out()
+            mean = tfidf.mean(axis=0).A1
+            top_idx = mean.argsort()[::-1][:8]
+            keywords = [vocab[i] for i in top_idx if mean[i] > 0][:8]
+
+        return [{
+            "id": "cluster-0",
+            "title": " / ".join(keywords[:3]) if keywords else "cluster 0",
+            "authors": (get_meta(did) or {}).get("authors") or [],
+            "count": 1,
+            "description": ("keywords: " + ", ".join(keywords)) if keywords else "no keywords yet",
+            "paper_ids": [did],
+        }]
+
+    clusterer = Clusterer(k=k)
+    labels = clusterer.fit(X_doc)
+
+    # pull doc texts for tf-idf
+    texts = {did: (get_text(did) or "") for did in doc_ids}
+
+    # tf-idf across all docs (doc-level)
+    vect = TfidfVectorizer(
+        lowercase=True,
+        stop_words="english",
+        token_pattern=r"(?u)\b[a-zA-Z][a-zA-Z\-]{2,}\b",
+        ngram_range=(1, 2),
+        max_features=20000,
+    )
+    corpus_ids = [did for did in doc_ids if texts.get(did, "").strip()]
+    if not corpus_ids:
+        # no text loaded somehow; still return grouping
+        grouped = defaultdict(list)
+        for did, lab in zip(doc_ids, labels):
+            grouped[lab].append(did)
+
+        out = []
+        for lab, dids in grouped.items():
+            out.append({
+                "id": f"cluster-{lab}",
+                "title": f"cluster {lab}",
+                "authors": [],
+                "count": len(dids),
+                "description": "no keywords yet",
+                "paper_ids": dids,
+            })
+        out.sort(key=lambda c: c["count"], reverse=True)
+        return out
+
+    tfidf = vect.fit_transform([texts[did] for did in corpus_ids])
+    vocab = vect.get_feature_names_out()
+    id_to_row = {did: i for i, did in enumerate(corpus_ids)}
+
+    # group docs by label
+    grouped = defaultdict(list)
+    for did, lab in zip(doc_ids, labels):
+        grouped[lab].append(did)
+
+    clusters_out = []
+    for lab, dids in grouped.items():
+        rows = [id_to_row[did] for did in dids if did in id_to_row]
+        keywords = []
+        if rows:
+            mean = tfidf[rows].mean(axis=0).A1
+            top_idx = mean.argsort()[::-1][:8]
+            keywords = [vocab[i] for i in top_idx if mean[i] > 0][:8]
+
+        title = " / ".join(keywords[:3]) if keywords else f"cluster {lab}"
+
+        authors = []
+        for did in dids:
+            meta = get_meta(did) or {}
+            a = meta.get("authors") or []
+            if isinstance(a, list):
+                authors.extend(a[:2])
+        authors = list(dict.fromkeys([x for x in authors if isinstance(x, str)]))[:6]
+
+        clusters_out.append({
+            "id": f"cluster-{lab}",
+            "title": title,
+            "authors": authors,
+            "count": len(dids),
+            "description": ("keywords: " + ", ".join(keywords)) if keywords else "no keywords yet",
+            "paper_ids": dids,
+        })
+
+    clusters_out.sort(key=lambda c: c["count"], reverse=True)
+    return clusters_out
 
 
 @app.get("/api/text/{doc_id}", response_model=TextResponse)
@@ -497,3 +583,161 @@ def get_pdf(file_id: str):
     path = matches[0]
     return FileResponse(path, media_type="application/pdf")
 
+from fastapi import Body
+from datetime import datetime
+import tempfile
+
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+
+@app.post("/api/export")
+def export_report(payload: dict = Body(default={})):
+    # payload comes from your ExportPage checkboxes/radios
+    fmt = (payload.get("format") or "pdf").lower()
+    if fmt != "pdf":
+        raise HTTPException(status_code=400, detail="only pdf export is implemented")
+
+    include_all = bool(payload.get("allPapers", True))
+    include_clusters_list = bool(payload.get("clustersList", True))
+    include_papers_by_cluster = bool(payload.get("papersByCluster", True))
+    include_summaries = bool(payload.get("summaries", True))
+    include_keywords = bool(payload.get("keywords", True))
+    include_insights = bool(payload.get("insights", True))
+
+    docs = list_docs() or []
+    clusters = []
+    try:
+        clusters = get_clusters()  # calls your existing /api/clustered function directly
+    except Exception:
+        clusters = []
+
+    # make a temp pdf path
+    tmpdir = tempfile.mkdtemp()
+    out_path = os.path.join(tmpdir, f"smartresearch_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
+
+    styles = getSampleStyleSheet()
+    story = []
+
+    # cover
+    story.append(Paragraph("smartresearch export report", styles["Title"]))
+    story.append(Spacer(1, 0.2 * inch))
+    story.append(Paragraph(f"generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles["Normal"]))
+    story.append(Paragraph(f"papers: {len(docs)}", styles["Normal"]))
+    story.append(Spacer(1, 0.3 * inch))
+
+    if include_clusters_list:
+        story.append(Paragraph("clusters", styles["Heading1"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+        if clusters:
+            rows = [["cluster", "papers", "keywords / description"]]
+            for c in clusters:
+                rows.append([
+                    c.get("title") or c.get("id") or "untitled",
+                    str(c.get("count") or 0),
+                    (c.get("description") or "")[:1600],
+                ])
+
+            table = Table(rows, colWidths=[2.4*inch, 0.8*inch, 3.8*inch])
+            table.setStyle(TableStyle([
+                ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
+                ("TEXTCOLOR", (0,0), (-1,0), colors.black),
+                ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
+                ("VALIGN", (0,0), (-1,-1), "TOP"),
+                ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+                ("FONTSIZE", (0,0), (-1,-1), 9),
+                ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.whitesmoke, colors.lightyellow]),
+                ("LEFTPADDING", (0,0), (-1,-1), 6),
+                ("RIGHTPADDING", (0,0), (-1,-1), 6),
+                ("TOPPADDING", (0,0), (-1,-1), 4),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+            ]))
+            story.append(table)
+        else:
+            story.append(Paragraph("no clusters returned.", styles["Normal"]))
+
+        story.append(PageBreak())
+
+    # helper: doc lookup
+    doc_map = {d["id"]: d for d in docs}
+
+    if include_papers_by_cluster and clusters:
+        story.append(Paragraph("papers by cluster", styles["Heading1"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+        for c in clusters:
+            title = c.get("title") or c.get("id") or "cluster"
+            story.append(Paragraph(title, styles["Heading2"]))
+
+            desc = c.get("description") or ""
+            if include_keywords and desc:
+                story.append(Paragraph(desc, styles["Normal"]))
+
+            paper_ids = c.get("paper_ids") or []
+            story.append(Paragraph(f"papers: {len(paper_ids)}", styles["Normal"]))
+            story.append(Spacer(1, 0.1 * inch))
+
+            for did in paper_ids:
+                rec = doc_map.get(did) or {"name": did}
+                meta = get_meta(did) or {}
+                name = rec.get("name") or did
+                story.append(Paragraph(f"- {name}", styles["Normal"]))
+
+                if include_summaries:
+                    summary = meta.get("summary") or meta.get("abstract")
+                    if not summary:
+                        try:
+                            summary = textrankish_summary(get_text(did) or "")
+                        except Exception:
+                            summary = None
+                    if summary:
+                        story.append(Paragraph(f"<i>{summary[:1800]}</i>", styles["BodyText"]))
+
+                story.append(Spacer(1, 0.12 * inch))
+
+            story.append(Spacer(1, 0.2 * inch))
+
+        story.append(PageBreak())
+
+    if include_all:
+        story.append(Paragraph("all papers", styles["Heading1"]))
+        story.append(Spacer(1, 0.15 * inch))
+
+        for d in docs:
+            did = d["id"]
+            meta = get_meta(did) or {}
+            story.append(Paragraph(d.get("name") or did, styles["Heading2"]))
+
+            # quick metadata line
+            bits = []
+            if meta.get("year"): bits.append(str(meta["year"]))
+            if meta.get("venue"): bits.append(str(meta["venue"]))
+            if meta.get("doi"): bits.append(f"doi: {meta['doi']}")
+            if bits:
+                story.append(Paragraph(" | ".join(bits), styles["Normal"]))
+
+            if include_summaries:
+                summary = meta.get("summary") or meta.get("abstract")
+                if not summary:
+                    try:
+                        summary = textrankish_summary(get_text(did) or "")
+                    except Exception:
+                        summary = None
+                if summary:
+                    story.append(Paragraph(summary[:2400], styles["BodyText"]))
+
+            story.append(Spacer(1, 0.25 * inch))
+
+    # build pdf
+    doc = SimpleDocTemplate(out_path, pagesize=LETTER, rightMargin=54, leftMargin=54, topMargin=54, bottomMargin=54)
+    doc.build(story)
+
+    return FileResponse(
+        out_path,
+        media_type="application/pdf",
+        filename=os.path.basename(out_path),
+    )
