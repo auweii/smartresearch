@@ -16,3 +16,4 @@ sentencepiece==0.1.99
 safetensors==0.4.3
 sentence-transformers==3.0.1
 faiss-cpu==1.8.0
+reportlab
