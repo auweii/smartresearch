@@ -1,8 +1,34 @@
-import React, { useState } from "react"
+import React, { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import axios from "axios"
+
+const API_BASE = "http://127.0.0.1:8000"
+
+function extFromFormat(fmt) {
+  if (fmt === "csv") return "csv"
+  if (fmt === "json") return "json"
+  return "pdf"
+}
+
+function mimeFromFormat(fmt) {
+  if (fmt === "csv") return "text/csv"
+  if (fmt === "json") return "application/json"
+  return "application/pdf"
+}
+
+function filenameFromHeader(headerValue, fallback) {
+  if (!headerValue) return fallback
+  const m1 = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(headerValue)
+  if (m1?.[1]) return decodeURIComponent(m1[1].trim())
+  const m2 = /filename\s*=\s*"?([^"]+)"?/i.exec(headerValue)
+  if (m2?.[1]) return m2[1].trim()
+  return fallback
+}
 
 export default function ExportPage() {
   const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState("")
   const [options, setOptions] = useState({
     allPapers: true,
     clustersList: true,
@@ -14,12 +40,66 @@ export default function ExportPage() {
     insights: true,
   })
 
+  const payload = useMemo(() => {
+    return {
+      include: {
+        all_papers: !!options.allPapers,
+        clusters_list: !!options.clustersList,
+        papers_by_cluster: !!options.papersByCluster,
+        selected_papers: !!options.selectedPapers,
+      },
+      extras: {
+        summaries: !!options.summaries,
+        keywords: !!options.keywords,
+        insights: !!options.insights,
+      },
+      format: options.format,
+    }
+  }, [options])
+
   const handleChange = (e) => {
     const { name, type, checked, value } = e.target
     setOptions((prev) => ({
       ...prev,
       [name]: type === "radio" ? value : checked,
     }))
+  }
+
+  const onExport = async () => {
+    if (busy) return
+    setErr("")
+    setBusy(true)
+
+    try {
+      const res = await axios.post(`${API_BASE}/api/export`, payload, {
+        responseType: "blob",
+        timeout: 60000,
+        headers: {
+          Accept: mimeFromFormat(options.format),
+          "Content-Type": "application/json",
+        },
+      })
+
+      const fallbackName = `smartresearch_export.${extFromFormat(options.format)}`
+      const cd = res.headers?.["content-disposition"]
+      const filename = filenameFromHeader(cd, fallbackName)
+
+      const blob = new Blob([res.data], { type: mimeFromFormat(options.format) })
+      const url = window.URL.createObjectURL(blob)
+
+      const a = document.createElement("a")
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error("export failed", e)
+      setErr("export failed. backend endpoint /api/export isn’t returning a file yet, or it crashed.")
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -40,7 +120,6 @@ export default function ExportPage() {
           in the selected format with optional summaries and insights.
         </p>
 
-        {/* What to export */}
         <section className="mb-8">
           <h2 className="text-lg font-semibold mb-3 text-bronze-800">
             Select what you want to export:
@@ -85,7 +164,6 @@ export default function ExportPage() {
           </div>
         </section>
 
-        {/* Format */}
         <section className="mb-8">
           <h2 className="text-lg font-semibold mb-3 text-bronze-800">
             Choose format:
@@ -124,7 +202,6 @@ export default function ExportPage() {
           </div>
         </section>
 
-        {/* Include extras */}
         <section className="mb-10">
           <h2 className="text-lg font-semibold mb-3 text-bronze-800">
             Include:
@@ -160,13 +237,27 @@ export default function ExportPage() {
           </div>
         </section>
 
-        {/* Export button */}
+        {err ? (
+          <div className="mb-6 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+            {err}
+          </div>
+        ) : null}
+
         <div className="flex justify-center">
-          <button className="px-6 py-2 bg-bronze-700 hover:bg-bronze-800 text-white font-semibold rounded-md transition">
-            Export
+          <button
+            onClick={onExport}
+            disabled={busy}
+            className={`px-6 py-2 font-semibold rounded-md transition ${
+              busy
+                ? "bg-bronze-300 text-white cursor-not-allowed"
+                : "bg-bronze-700 hover:bg-bronze-800 text-white"
+            }`}
+          >
+            {busy ? "exporting..." : "Export"}
           </button>
         </div>
       </div>
     </div>
   )
 }
+
