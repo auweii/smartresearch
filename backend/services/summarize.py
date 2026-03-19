@@ -3,10 +3,9 @@ from typing import List
 from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize
 import nltk
+import os
 
-# one-time setup (quiet download)
-nltk.download('punkt', quiet=True)
-nltk.download('stopwords', quiet=True)
+nltk.data.path.append(os.path.expanduser("~/.nltk_data"))
 
 def textrankish_summary(text: str, max_sentences: int = 5) -> str:
     """
