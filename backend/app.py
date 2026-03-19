@@ -5,6 +5,7 @@ from typing import List
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
+import logging
 import requests
 import re
 import os
@@ -12,8 +13,8 @@ import glob
 from pathlib import Path
 
 from models.schemas import (
-    UploadResponse, DocMeta, SummarizeRequest, SummarizeResponse,
-    SearchRequest, SearchResponse, SearchHit, MetaResponse, Metadata, TextResponse
+    FullMetadata, UploadResponse, DocMeta, SummarizeRequest, SummarizeResponse,
+    SearchRequest, SearchResponse, SearchHit, MetaResponse, TextResponse
 )
 from utils.storage import (
     save_file, save_text, get_text, list_docs, get_doc,
@@ -23,9 +24,12 @@ from services.extract import pdf_to_text
 from services.summarize import textrankish_summary
 from services.ocr import ocr_pdf_to_text
 from services.metadata import enrich_from_text
+from services.metadata_compare import compare_metadata  # <-- new imports
 from services import semantic
 from services.cluster import Clusterer 
+from services.pdf_processing import process_pdf
 
+logger = logging.getLogger("smartresearch.api")
 
 # app setup
 app = FastAPI(title="SmartResearch API", version="0.6.2")
@@ -88,14 +92,19 @@ def health():
 
 @app.get("/api/docs", response_model=List[DocMeta])
 def docs_list():
-    """return all indexed docs with minimal metadata"""
+    """return all indexed docs with minimal metadata and summary from final metadata"""
     docs = list_docs()
     enriched = []
     for d in docs:
         meta = get_meta(d["id"]) or {}
-        summary = meta.get("summary") or meta.get("abstract")
-        enriched.append({**d, "summary": summary})
+        final_meta = meta.get("final") or {}
+        summary = final_meta.get("summary") or final_meta.get("abstract")
+        enriched.append({
+            **d,
+            "summary": summary
+        })
     return enriched
+
 
 from collections import defaultdict
 import numpy as np
@@ -212,12 +221,21 @@ def get_clusters():
             top_idx = mean.argsort()[::-1][:8]
             keywords = [vocab[i] for i in top_idx if mean[i] > 0][:8]
 
-        title = " / ".join(keywords[:3]) if keywords else f"cluster {lab}"
+        title = None
+        for did in dids:
+            meta = get_meta(did) or {}
+            final_meta = meta.get("final") or {}
+            title = final_meta.get("title")
+            if title:
+                break
+        title = title or f"cluster {lab}"
+
 
         authors = []
         for did in dids:
             meta = get_meta(did) or {}
-            a = meta.get("authors") or []
+            final_meta = meta.get("final") or {}
+            a = final_meta.get("authors") or []
             if isinstance(a, list):
                 authors.extend(a[:2])
         authors = list(dict.fromkeys([x for x in authors if isinstance(x, str)]))[:6]
@@ -245,42 +263,89 @@ def fetch_text(doc_id: str):
 
 @app.get("/api/meta/{doc_id}", response_model=MetaResponse)
 def fetch_meta(doc_id: str):
-    """retrieve and refresh metadata where possible"""
-    _ = get_doc(doc_id)
-    meta = get_meta(doc_id)
-    doi = meta.get("doi") if isinstance(meta, dict) else None
+    """Retrieve and refresh metadata safely with PDF + external comparison"""
 
-    # if no abstract, fetch from Semantic Scholar
-    if doi and "abstract" not in meta:
+    # ensure doc exists
+    try:
+        _ = get_doc(doc_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    meta = get_meta(doc_id) or {}
+
+    pdf_meta = meta.get("pdf") or {}
+    external_meta = meta.get("external") or {}
+    final_meta = meta.get("final") or pdf_meta
+    confidence = meta.get("confidence", 1.0)
+    reliable = meta.get("reliable", True)
+
+
+    # DOI from PDF metadata
+    doi = pdf_meta.get("doi") or pdf_meta.get("DOI")
+
+    # fetch external metadata if DOI exists
+    if doi:
         try:
             res = requests.get(
                 f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}",
                 params={"fields": "title,abstract,venue,year,authors,citationCount"},
                 timeout=10,
             )
-            if res.status_code == 200:
-                data = res.json()
-                meta.update({
-                    "abstract": data.get("abstract"),
-                    "venue": data.get("venue"),
-                    "citationCount": data.get("citationCount"),
-                })
-                save_meta(doc_id, meta)
-        except Exception:
-            pass
+            res.raise_for_status()
+            data = res.json()
+
+            external_meta = {
+                "title": data.get("title"),
+                "authors": [a["name"] for a in data.get("authors", [])],
+                "year": data.get("year"),
+                "venue": data.get("venue"),
+                "abstract": data.get("abstract"),
+                "citationCount": data.get("citationCount"),
+                "doi": doi,
+                "source": "semantic_scholar",
+            }
+
+            comparison = compare_metadata(pdf_meta, external_meta)
+            final_meta = external_meta if comparison["reliable"] else pdf_meta
+
+            meta.update({
+                "external": external_meta,
+                "final": final_meta,
+                "confidence": comparison["confidence"],
+                "reliable": comparison["reliable"],
+            })
+            save_meta(doc_id, meta)
+
+        except requests.RequestException as e:
+            logger.warning(f"Semantic Scholar API request failed for DOI {doi}: {e}")
+        except Exception as e:
+            logger.warning(f"Unexpected error fetching external metadata for {doc_id}: {e}")
 
     # ensure summary always exists
     try:
-        summary = meta.get("summary") if isinstance(meta, dict) else None
+        summary = final_meta.get("summary") if isinstance(final_meta, dict) else None
         if not summary:
-            summary = (meta.get("abstract") if isinstance(meta, dict) else None) or textrankish_summary(get_text(doc_id))
+            summary = (
+                final_meta.get("abstract") if isinstance(final_meta, dict) else None
+            ) or textrankish_summary(get_text(doc_id))
             if isinstance(meta, dict):
-                meta["summary"] = summary
+                final_meta["summary"] = summary
+                meta["final"] = final_meta
                 save_meta(doc_id, meta)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to generate summary for {doc_id}: {e}")
 
-    return MetaResponse(id=doc_id, meta=Metadata(**meta) if isinstance(meta, dict) else None)
+    return MetaResponse(
+        id=doc_id,
+        meta=FullMetadata(
+            pdf=pdf_meta,
+            external=external_meta,
+            final=final_meta,
+            confidence=confidence,
+            reliable=reliable,
+        )
+    )
+
 
 
 @app.delete("/api/docs/{doc_id}")
@@ -302,10 +367,18 @@ async def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF supported")
 
+    # save uploaded file
     raw = await file.read()
     rec = save_file(file.filename, raw)
 
+    # extract text from PDF
     text = pdf_to_text(rec["path"])
+    
+    print(f"\n===== PDF UPLOAD DEBUG: {file.filename} =====")
+    print(text[:1000])  # print first 1000 characters
+    print("==========================================\n")
+
+    # fallback OCR if text is very short
     used_ocr = False
     if len(text.strip()) < 200:
         try:
@@ -313,32 +386,50 @@ async def upload_pdf(file: UploadFile = File(...)):
             if len(ocr_text.strip()) > len(text.strip()):
                 text = ocr_text
                 used_ocr = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"OCR failed for {file.filename}: {e}")
 
+
+    # save the extracted text
     save_text(rec["id"], text)
+
+    # add to semantic embeddings
     try:
         semantic.add_doc(rec["id"], text)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to add semantic embedding for {rec['id']}: {e}")
 
-    meta = enrich_from_text(text) or {}
-    if meta:
-        save_meta(rec["id"], meta)
+    # --- Step 2: store BOTH metadata sources ---
+    pdf_meta = enrich_from_text(text) or {}
 
+    summary = textrankish_summary(text, max_sentences=5)
+
+    meta_payload = {
+        "pdf": pdf_meta,            # metadata extracted from PDF
+        "external": {},             # no external metadata yet
+        "final": {**pdf_meta,       # copy PDF meta as base
+                "summary": summary,
+                "abstract": summary},  # optional: reuse summary for abstract
+        "confidence": 1.0,          # full confidence in PDF source for now
+        "reliable": True,           # assume reliable until compared
+    }
+
+    save_meta(rec["id"], meta_payload)
+    # --- end Step 2 ---
+
+   # prepare a preview
     preview = (text[:600] + "…") if len(text) > 600 else text
     try:
         _ensure_tfidf_ready()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"TF-IDF cache build failed after upload {rec['id']}: {e}")
 
     return UploadResponse(
         doc=DocMeta(id=rec["id"], name=rec["name"], n_chars=len(text)),
         preview=preview,
         used_ocr=used_ocr,
-        meta=Metadata(**meta) if meta else None,
+        meta=FullMetadata(**meta_payload)
     )
-
 
 @app.post("/api/move_to_storage")
 def move_to_storage():
@@ -455,7 +546,7 @@ async def similar_docs(doc_id: str, topk: int = 10):
             continue
         txt = get_text(did)
         prev = txt[:220].replace("\n", " ") + ("…" if len(txt) > 220 else "")
-        hits.append(SearchHit(id=did, name=docs[did]["name"], score=float(score), preview=prev))
+        hits.append(SearchHit(id=did, name=docs[did]["name"], score=float(score), preview=prev, meta=FullMetadata(**other_meta) if isinstance(other_meta, dict) else None ))
 
     hits = sorted(hits, key=lambda x: -x.score)[:topk]
     return SearchResponse(hits=hits)
@@ -466,9 +557,11 @@ def external_recommendations(doc_id: str):
     """fetch related works using DOI/title; fallback to local semantic neighbors"""
     try:
         rec = get_doc(doc_id)
-        meta = get_meta(doc_id) or {}
-        doi = meta.get("doi")
-        title = meta.get("title") or rec["name"]
+        final_meta = meta.get("final") or {}
+        doi = final_meta.get("doi")
+        title = final_meta.get("title")
+        authors = final_meta.get("authors", [])
+
 
         academic_keywords = [
             "study", "analysis", "research", "paper", "experiment",
@@ -539,6 +632,7 @@ def external_recommendations(doc_id: str):
                 "abstract": None,
                 "citations": None,
                 "url": None,
+                "meta": FullMetadata(**other_meta)
             })
         if recs:
             return {"source": "local", "recommendations": recs}
@@ -567,7 +661,8 @@ def reindex():
             if text.strip():
                 semantic.add_doc(d["id"], text)
                 reindexed += 1
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to reindex doc {d['id']}: {e}")
             continue
     return {"status": "ok", "reindexed": reindexed}
 
@@ -596,7 +691,7 @@ from reportlab.lib import colors
 
 @app.post("/api/export")
 def export_report(payload: dict = Body(default={})):
-    # payload comes from your ExportPage checkboxes/radios
+    # payload comes from ExportPage checkboxes/radios
     fmt = (payload.get("format") or "pdf").lower()
     if fmt != "pdf":
         raise HTTPException(status_code=400, detail="only pdf export is implemented")
@@ -609,32 +704,44 @@ def export_report(payload: dict = Body(default={})):
     include_insights = bool(payload.get("insights", True))
 
     docs = list_docs() or []
-    clusters = []
+
     try:
-        clusters = get_clusters()  # calls your existing /api/clustered function directly
-    except Exception:
+        clusters = get_clusters() or []
+    except Exception as e:
+        print("[export] failed to fetch clusters:", e)
         clusters = []
 
-    # make a temp pdf path
+    # temp pdf path
     tmpdir = tempfile.mkdtemp()
-    out_path = os.path.join(tmpdir, f"smartresearch_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
+    out_path = os.path.join(
+        tmpdir,
+        f"smartresearch_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    )
 
     styles = getSampleStyleSheet()
     story = []
 
-    # cover
-    story.append(Paragraph("smartresearch export report", styles["Title"]))
+    # ------------------------------------------------------------------
+    # Cover
+    # ------------------------------------------------------------------
+    story.append(Paragraph("SmartResearch Export Report", styles["Title"]))
     story.append(Spacer(1, 0.2 * inch))
-    story.append(Paragraph(f"generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles["Normal"]))
-    story.append(Paragraph(f"papers: {len(docs)}", styles["Normal"]))
+    story.append(Paragraph(
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        styles["Normal"]
+    ))
+    story.append(Paragraph(f"Papers: {len(docs)}", styles["Normal"]))
     story.append(Spacer(1, 0.3 * inch))
 
+    # ------------------------------------------------------------------
+    # Clusters overview
+    # ------------------------------------------------------------------
     if include_clusters_list:
-        story.append(Paragraph("clusters", styles["Heading1"]))
+        story.append(Paragraph("Clusters", styles["Heading1"]))
         story.append(Spacer(1, 0.15 * inch))
 
         if clusters:
-            rows = [["cluster", "papers", "keywords / description"]]
+            rows = [["Cluster", "Papers", "Keywords / Description"]]
             for c in clusters:
                 rows.append([
                     c.get("title") or c.get("id") or "untitled",
@@ -645,7 +752,6 @@ def export_report(payload: dict = Body(default={})):
             table = Table(rows, colWidths=[2.4*inch, 0.8*inch, 3.8*inch])
             table.setStyle(TableStyle([
                 ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
-                ("TEXTCOLOR", (0,0), (-1,0), colors.black),
                 ("GRID", (0,0), (-1,-1), 0.5, colors.grey),
                 ("VALIGN", (0,0), (-1,-1), "TOP"),
                 ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
@@ -658,44 +764,56 @@ def export_report(payload: dict = Body(default={})):
             ]))
             story.append(table)
         else:
-            story.append(Paragraph("no clusters returned.", styles["Normal"]))
+            story.append(Paragraph("No clusters available.", styles["Normal"]))
 
         story.append(PageBreak())
 
-    # helper: doc lookup
+    # helper lookup
     doc_map = {d["id"]: d for d in docs}
 
+    # ------------------------------------------------------------------
+    # Papers by cluster
+    # ------------------------------------------------------------------
     if include_papers_by_cluster and clusters:
-        story.append(Paragraph("papers by cluster", styles["Heading1"]))
+        story.append(Paragraph("Papers by Cluster", styles["Heading1"]))
         story.append(Spacer(1, 0.15 * inch))
 
         for c in clusters:
             title = c.get("title") or c.get("id") or "cluster"
             story.append(Paragraph(title, styles["Heading2"]))
 
-            desc = c.get("description") or ""
-            if include_keywords and desc:
-                story.append(Paragraph(desc, styles["Normal"]))
+            if include_keywords and c.get("description"):
+                story.append(Paragraph(c["description"], styles["Normal"]))
 
             paper_ids = c.get("paper_ids") or []
-            story.append(Paragraph(f"papers: {len(paper_ids)}", styles["Normal"]))
+            story.append(Paragraph(f"Papers: {len(paper_ids)}", styles["Normal"]))
             story.append(Spacer(1, 0.1 * inch))
 
             for did in paper_ids:
                 rec = doc_map.get(did) or {"name": did}
                 meta = get_meta(did) or {}
-                name = rec.get("name") or did
-                story.append(Paragraph(f"- {name}", styles["Normal"]))
+                final_meta = meta.get("final") or {}
+
+                title = final_meta.get("title") or rec.get("name") or did
+                story.append(Paragraph(f"- {title}", styles["Normal"]))
 
                 if include_summaries:
-                    summary = meta.get("summary") or meta.get("abstract")
+                    summary = (
+                        final_meta.get("summary")
+                        or final_meta.get("abstract")
+                    )
+
                     if not summary:
                         try:
                             summary = textrankish_summary(get_text(did) or "")
-                        except Exception:
+                        except Exception as e:
+                            logger.warning(f"Summary generation failed for doc {did}: {e}")
                             summary = None
+
                     if summary:
-                        story.append(Paragraph(f"<i>{summary[:1800]}</i>", styles["BodyText"]))
+                        story.append(
+                            Paragraph(f"<i>{summary[:1800]}</i>", styles["BodyText"])
+                        )
 
                 story.append(Spacer(1, 0.12 * inch))
 
@@ -703,37 +821,73 @@ def export_report(payload: dict = Body(default={})):
 
         story.append(PageBreak())
 
+    # ------------------------------------------------------------------
+    # All papers
+    # ------------------------------------------------------------------
     if include_all:
-        story.append(Paragraph("all papers", styles["Heading1"]))
+        story.append(Paragraph("All Papers", styles["Heading1"]))
         story.append(Spacer(1, 0.15 * inch))
 
         for d in docs:
             did = d["id"]
             meta = get_meta(did) or {}
-            story.append(Paragraph(d.get("name") or did, styles["Heading2"]))
+            final_meta = meta.get("final") or {}
 
-            # quick metadata line
+            title = final_meta.get("title") or d.get("name") or did
+            story.append(Paragraph(title, styles["Heading2"]))
+
+            # metadata line
             bits = []
-            if meta.get("year"): bits.append(str(meta["year"]))
-            if meta.get("venue"): bits.append(str(meta["venue"]))
-            if meta.get("doi"): bits.append(f"doi: {meta['doi']}")
+            if final_meta.get("year"):
+                bits.append(str(final_meta["year"]))
+            if final_meta.get("venue"):
+                bits.append(str(final_meta["venue"]))
+            if final_meta.get("doi"):
+                bits.append(f"doi: {final_meta['doi']}")
+
             if bits:
                 story.append(Paragraph(" | ".join(bits), styles["Normal"]))
 
+            # summary
             if include_summaries:
-                summary = meta.get("summary") or meta.get("abstract")
+                summary = (
+                    final_meta.get("summary")
+                    or final_meta.get("abstract")
+                )
+
                 if not summary:
                     try:
                         summary = textrankish_summary(get_text(did) or "")
                     except Exception:
                         summary = None
+
                 if summary:
-                    story.append(Paragraph(summary[:2400], styles["BodyText"]))
+                    story.append(
+                        Paragraph(summary[:2400], styles["BodyText"])
+                    )
+
+            # reliability hint (optional but useful)
+            if meta.get("confidence") is not None:
+                story.append(
+                    Paragraph(
+                        f"<font size=8>confidence: {meta.get('confidence'):.2f} · reliable: {meta.get('reliable', True)}</font>",
+                        styles["Normal"]
+                    )
+                )
 
             story.append(Spacer(1, 0.25 * inch))
 
-    # build pdf
-    doc = SimpleDocTemplate(out_path, pagesize=LETTER, rightMargin=54, leftMargin=54, topMargin=54, bottomMargin=54)
+    # ------------------------------------------------------------------
+    # Build PDF
+    # ------------------------------------------------------------------
+    doc = SimpleDocTemplate(
+        out_path,
+        pagesize=LETTER,
+        rightMargin=54,
+        leftMargin=54,
+        topMargin=54,
+        bottomMargin=54,
+    )
     doc.build(story)
 
     return FileResponse(
