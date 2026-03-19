@@ -1,5 +1,14 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+
+# --- new full metadata models ---
+class FullMetadata(BaseModel):
+    pdf: Dict[str, Any] = Field(default_factory=dict)       # metadata extracted from PDF
+    external: Dict[str, Any] = Field(default_factory=dict)  # external metadata (Semantic Scholar)
+    final: Dict[str, Any] = Field(default_factory=dict)     # chosen "final" metadata
+    confidence: float = 1.0                                 # confidence score in final metadata
+    reliable: bool = True                                   # whether final metadata is reliable
+
 
 # document and metadata schemas
 class DocMeta(BaseModel):
@@ -7,16 +16,8 @@ class DocMeta(BaseModel):
     id: str
     name: str
     n_chars: int
+    summary: Optional[str] = None
 
-
-class Metadata(BaseModel):
-    """optional bibliographic metadata (e.g., from CrossRef)"""
-    title: Optional[str] = None
-    authors: Optional[List[str]] = None
-    year: Optional[int] = None
-    doi: Optional[str] = None
-    venue: Optional[str] = None
-    publisher: Optional[str] = None
 
 
 # upload and summarization
@@ -25,7 +26,7 @@ class UploadResponse(BaseModel):
     doc: DocMeta
     preview: str
     used_ocr: bool = False  # true if OCR was used instead of direct extraction
-    meta: Optional[Metadata] = None
+    meta: Optional[FullMetadata] = None
 
 
 class SummarizeRequest(BaseModel):
@@ -97,6 +98,7 @@ class SearchHit(BaseModel):
     name: str
     score: float
     preview: str
+    meta: Optional[FullMetadata] = None  # new field
 
 
 class SearchResponse(BaseModel):
@@ -107,4 +109,4 @@ class SearchResponse(BaseModel):
 class MetaResponse(BaseModel):
     """stored metadata response for a document"""
     id: str
-    meta: Optional[Metadata] = None
+    meta: Optional[FullMetadata] = None
