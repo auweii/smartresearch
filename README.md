@@ -28,6 +28,32 @@ data/ → Local storage for uploaded PDFs (runtime-generated)
 | **Local Storage Layer** | Manages uploaded files, text, and metadata without an external DB. |
 | **Frontend Integration** | React interface for uploading, viewing, and exploring clusters. |
 
+we now have a working backend pipeline that processes uploaded pdfs end-to-end rather than separate components
+
+the system can extract text from standard pdfs and uses ocr fallback for scanned documents
+
+we support both extractive and abstractive summarisation, with structured outputs for each paper
+
+metadata is automatically extracted and enriched using sources like crossref, with confidence scoring for reliability
+
+documents are embedded using sentence transformers, which enables semantic search and similarity matching
+
+we support multiple search modes, including keyword, semantic, and hybrid retrieval
+
+clustering is implemented using tf-idf and kmeans to group papers into interpretable topic clusters
+
+the backend exposes api endpoints for upload, summaries, search, clustering, and document retrieval
+
+the frontend is integrated with these endpoints and supports the main workflow: upload, all papers, cluster, and export
+
+the system stores files and metadata locally using a lightweight file-based approach
+
+current issues:
+
+one current issue is that the “view summary” function in the all papers view is not consistently displaying the correct summary data, which we are in the process of fixing
+
+overall, the core phase 1 functionality is implemented, and we are now focusing on fixing edge cases, improving consistency between frontend and backend, and polishing the system for submission
+
 ---
 
 ## System Overview
