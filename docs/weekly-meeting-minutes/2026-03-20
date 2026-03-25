@@ -1,0 +1,44 @@
+# Meeting Minutes — 20 March 2026
+
+**Time:** 2:00 PM  
+**Location:** Zoom
+**Type:** Supervisor meeting
+
+## Attendees
+- Chelsea Okan  
+- Noor Ahmed  
+- Nishad Gyawali  
+- Dr. Jack Yang 
+
+## Discussion Summary
+- The team provided Dr. Yang with an overview of current project progress across the system.
+- Updates included:
+  - Functional PDF processing pipeline with OCR support.
+  - Working summarisation features (extractive and abstractive).
+  - Metadata extraction and enrichment with confidence scoring.
+  - Semantic search capabilities using vectorisation.
+  - Clustering implementation using KMeans and TF-IDF.
+  - Integrated backend pipeline connecting all processing components.
+- Nishad was scheduled to deliver a live system walkthrough but encountered technical issues during the meeting.
+- As an alternative, the team proposed either:
+  - A follow-up meeting, or  
+  - Providing a recorded walkthrough of the system.
+- Dr. Yang requested a recording of the walkthrough instead of scheduling another meeting.
+
+## Action Items
+- **Nishad:**  
+  - Record and send full system walkthrough to Dr. Yang.  
+  - Confirmed post-meeting responsibility for sending the recording.  
+  - Follow-up confirmation (23 March): recording to be sent between 24–25 March.
+- **All Members:**  
+  - Ensure recording supports advisor review and sign-off for Assignment 4 submission (due 27 March).
+- **Chelsea:**  
+  - Continue aligning documentation with implemented system and upcoming advisor feedback.
+
+## Next Meeting
+- No meeting scheduled at this time.
+
+---
+
+**Prepared by:** Chelsea  
+**Date prepared:** 20 March 2026
