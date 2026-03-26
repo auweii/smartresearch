@@ -1,58 +1,61 @@
 # SmartResearch – CSIT321
 
-
-**SmartResearch** is an intelligent research assistant built for automated PDF ingestion, metadata extraction, clustering, and semantic search.  
-It allows researchers to **upload, summarise, and group academic papers** into topic clusters using NLP and machine learning.
+**SmartResearch** is an AI-assisted research tool for automated PDF ingestion, metadata extraction, clustering, and semantic search.  
+It enables users to upload, summarise, and organise academic papers into interpretable topic clusters using NLP and machine learning.
 
 ---
 
 ## Repository Structure
-```markdown
-backend/ → FastAPI server for processing, summarisation, and search
-frontend/ → React + Vite interface for upload, browsing, and clustering
-docs/ → Reports, planning documents, and deliverables
-data/ → Local storage for uploaded PDFs (runtime-generated)
-```
+
+backend/   → FastAPI backend for processing, summarisation, and search  
+frontend/  → React + Vite interface for upload, browsing, and clustering  
+docs/      → Reports, planning documents, and submission deliverables  
+data/      → Local storage for uploaded PDFs and generated outputs  
 
 ---
 
-## Current Features :) 
+## Features
 
 | Feature | Description |
-|----------|--------------|
-| **PDF Upload & OCR** | Uploads research papers, extracts text (OCR fallback for scanned files). |
-| **Automatic Metadata Extraction** | Parses title, author, and year from document text. |
-| **Summarisation Engine** | Generates text summaries using extractive + semantic methods. |
-| **Clustering System** | Groups similar papers by topic using TF-IDF or embedding vectors. |
-| **Semantic Search** | Allows natural-language search through all stored papers. |
-| **Local Storage Layer** | Manages uploaded files, text, and metadata without an external DB. |
-| **Frontend Integration** | React interface for uploading, viewing, and exploring clusters. |
+|--------|-------------|
+| **PDF Upload & OCR** | Upload research papers with text extraction and OCR fallback for scanned documents. |
+| **Metadata Extraction** | Automatically extracts title, authors, and year, with optional enrichment (e.g. CrossRef). |
+| **Summarisation Engine** | Generates structured summaries using extractive and semantic methods. |
+| **Clustering System** | Groups papers into topic clusters using TF-IDF and embedding-based methods. |
+| **Search (Keyword / Semantic / Hybrid)** | Supports multiple retrieval modes for different research workflows. |
+| **Semantic Similarity** | Embedding-based similarity enables related paper discovery. |
+| **Local Storage** | Stores PDFs, extracted text, and metadata locally without requiring an external database. |
+| **Frontend Integration** | React interface supporting upload, browsing, clustering, and export workflows. |
 
-we now have a working backend pipeline that processes uploaded pdfs end-to-end rather than separate components
+---
 
-the system can extract text from standard pdfs and uses ocr fallback for scanned documents
+## System Capabilities
 
-we support both extractive and abstractive summarisation, with structured outputs for each paper
+The backend implements a complete end-to-end processing pipeline for uploaded PDFs rather than isolated components.
 
-metadata is automatically extracted and enriched using sources like crossref, with confidence scoring for reliability
+- Extracts text from standard PDFs with OCR fallback for scanned documents  
+- Generates structured summaries using both extractive and abstractive approaches  
+- Automatically extracts and enriches metadata with confidence scoring  
+- Embeds documents using SentenceTransformers for semantic retrieval  
+- Supports keyword, semantic, and hybrid search modes  
+- Clusters papers using TF-IDF and KMeans into interpretable topic groups  
+- Exposes API endpoints for upload, search, clustering, summaries, and document retrieval  
 
-documents are embedded using sentence transformers, which enables semantic search and similarity matching
+The frontend integrates these endpoints into a unified workflow:
 
-we support multiple search modes, including keyword, semantic, and hybrid retrieval
+**Upload → All Papers → Cluster → Export**
 
-clustering is implemented using tf-idf and kmeans to group papers into interpretable topic clusters
+All files and metadata are stored locally using a lightweight file-based persistence model.
 
-the backend exposes api endpoints for upload, summaries, search, clustering, and document retrieval
+---
 
-the frontend is integrated with these endpoints and supports the main workflow: upload, all papers, cluster, and export
+## Known Issues
 
-the system stores files and metadata locally using a lightweight file-based approach
+- The **“View Summary”** action in the All Papers view may not consistently display the correct summary data. This is currently being fixed.
 
-current issues:
+## Notes
 
-one current issue is that the “view summary” function in the all papers view is not consistently displaying the correct summary data, which we are in the process of fixing
-
-overall, the core phase 1 functionality is implemented, and we are now focusing on fixing edge cases, improving consistency between frontend and backend, and polishing the system for submission
+- Tested on **Python 3.11.14** (other versions may cause issues)
 
 ---
 
@@ -105,19 +108,15 @@ npm run dev
 
 ## Tech Stack
 
-| Layer | Tools & Frameworks | Purpose |
-|--------|--------------------|----------|
-| **Frontend** | React, Vite, Tailwind CSS | Modern UI framework for upload, browsing, and clustering views. |
-| **Backend** | FastAPI (Python) | Core application layer for document processing and REST endpoints. |
-| **Machine Learning / NLP** | scikit-learn, SentenceTransformers (MiniLM), NumPy | Power clustering, TF-IDF vectorisation, and semantic similarity search. |
-| **Text Extraction** | PyPDF2, pytesseract (OCR) | Extracts raw text from PDFs, with OCR fallback for scanned documents. |
-| **Summarisation** | TextRank, semantic embeddings | Generates extractive and semantic summaries from paper text. |
-| **Storage** | Local filesystem + JSON index | Lightweight document registry for offline, file-based persistence. |
-| **Build & Tooling** | Uvicorn, Node.js, npm | Dev servers and runtime management for backend and frontend respectively. |
-| **API Testing / Docs** | Swagger (auto-generated from FastAPI) | Provides interactive API documentation for quick validation. |
+| Layer | Tools | Purpose |
+|------|------|---------|
+| **Frontend** | React, Vite, Tailwind CSS | Interface for upload, browsing, clustering, and export |
+| **Backend** | FastAPI (Python) | API layer for processing and orchestration |
+| **ML / NLP** | scikit-learn, SentenceTransformers, NumPy | Clustering, TF-IDF, semantic search |
+| **Text Extraction** | PyPDF2, pytesseract | PDF parsing with OCR fallback |
+| **Summarisation** | TextRank, embedding-based methods | Structured summary generation |
+| **Storage** | Local filesystem + JSON index | Lightweight persistence |
+| **Tooling** | Uvicorn, Node.js, npm | Runtime and development tooling |
+| **API Docs** | Swagger (FastAPI) | Interactive API documentation |
 
-
-
-
-
-
+---
