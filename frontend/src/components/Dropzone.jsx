@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import axios from "axios";
+import { uploadPaper } from "../api";
 import { createPortal } from "react-dom";
 import { Worker, Viewer } from "@react-pdf-viewer/core";
 import "@react-pdf-viewer/core/lib/styles/index.css";
@@ -12,8 +12,7 @@ export default function Dropzone({ onFiles = () => {} }) {
     const formData = new FormData();
     formData.append("file", upload.file);
     try {
-      await axios.post("http://127.0.0.1:8000/api/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      await uploadPaper(upload.file, {
         onUploadProgress: (progressEvent) => {
           const percent = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
