@@ -400,9 +400,36 @@ async def upload_pdf(file: UploadFile = File(...)):
         logger.warning(f"Failed to add semantic embedding for {rec['id']}: {e}")
 
     # --- Step 2: store BOTH metadata sources ---
-    pdf_meta = enrich_from_text(text) or {}
+    pdf_meta = enrich_from_text(text, rec["path"]) or {}
 
-    summary = textrankish_summary(text, max_sentences=5)
+    clean_text = text
+
+    # Remove obvious noisy lines before summarising
+    noise_patterns = [
+        "keywords:",
+        "key words:",
+        "references",
+        "bibliography",
+        "http://",
+        "https://",
+        "www.",
+    ]
+
+    clean_lines = []
+    for line in text.splitlines():
+        line_lower = line.strip().lower()
+
+        if not line_lower:
+            continue
+
+        if any(pattern in line_lower for pattern in noise_patterns):
+            continue
+
+        clean_lines.append(line.strip())
+
+    clean_text = "\n".join(clean_lines)
+
+    summary = textrankish_summary(clean_text, max_sentences=5)
 
     meta_payload = {
         "pdf": pdf_meta,            # metadata extracted from PDF
@@ -537,18 +564,33 @@ async def hybrid_search(req: SearchRequest):
 async def similar_docs(doc_id: str, topk: int = 10):
     """find locally similar docs using semantic embeddings"""
     semantic.ensure_loaded()
+
     docs = {d["id"]: d for d in list_docs()}
     matches = semantic.similar(doc_id, topk=topk * 2)
 
     hits = []
+
     for did, score in matches:
         if did == doc_id or score < 0.35 or did not in docs:
             continue
-        txt = get_text(did)
+
+        txt = get_text(did) or ""
         prev = txt[:220].replace("\n", " ") + ("…" if len(txt) > 220 else "")
-        hits.append(SearchHit(id=did, name=docs[did]["name"], score=float(score), preview=prev, meta=FullMetadata(**other_meta) if isinstance(other_meta, dict) else None ))
+
+        other_meta = get_meta(did) or {}
+
+        hits.append(
+            SearchHit(
+                id=did,
+                name=docs[did]["name"],
+                score=float(score),
+                preview=prev,
+                meta=FullMetadata(**other_meta) if other_meta else None,
+            )
+        )
 
     hits = sorted(hits, key=lambda x: -x.score)[:topk]
+
     return SearchResponse(hits=hits)
 
 
@@ -557,31 +599,42 @@ def external_recommendations(doc_id: str):
     """fetch related works using DOI/title; fallback to local semantic neighbors"""
     try:
         rec = get_doc(doc_id)
+        meta = get_meta(doc_id) or {}
         final_meta = meta.get("final") or {}
-        doi = final_meta.get("doi")
-        title = final_meta.get("title")
-        authors = final_meta.get("authors", [])
 
+        doi = final_meta.get("doi")
+        title = final_meta.get("title") or rec.get("name") or ""
+        authors = final_meta.get("authors") or []
 
         academic_keywords = [
             "study", "analysis", "research", "paper", "experiment",
             "evaluation", "journal", "conference", "dataset", "neural", "algorithm"
         ]
-        is_academic = any(re.search(rf"\b{k}\b", title.lower()) for k in academic_keywords)
+
+        is_academic = any(
+            re.search(rf"\b{k}\b", title.lower())
+            for k in academic_keywords
+        )
 
         if doi:
             url = f"https://api.semanticscholar.org/recommendations/v1/papers/forpaper/DOI:{doi}"
-            params = {"limit": 5, "fields": "title,authors,year,venue,abstract,url,citationCount"}
+            params = {
+                "limit": 5,
+                "fields": "title,authors,year,venue,abstract,url,citationCount"
+            }
+
             res = requests.get(url, params=params, timeout=10)
+
             if res.status_code == 200:
                 data = res.json().get("recommendedPapers", [])
+
                 if data:
                     return {
                         "source": "doi",
                         "recommendations": [
                             {
                                 "title": d.get("title"),
-                                "authors": [a["name"] for a in d.get("authors", [])],
+                                "authors": [a.get("name") for a in d.get("authors", [])],
                                 "year": d.get("year"),
                                 "venue": d.get("venue"),
                                 "abstract": d.get("abstract"),
@@ -592,19 +645,26 @@ def external_recommendations(doc_id: str):
                         ],
                     }
 
-        if is_academic:
+        if is_academic and title:
             url = "https://api.semanticscholar.org/graph/v1/paper/search"
-            params = {"query": title, "limit": 5, "fields": "title,authors,year,venue,abstract,url,citationCount"}
+            params = {
+                "query": title,
+                "limit": 5,
+                "fields": "title,authors,year,venue,abstract,url,citationCount"
+            }
+
             res = requests.get(url, params=params, timeout=10)
+
             if res.status_code == 200:
                 data = res.json().get("data", [])
+
                 if data:
                     return {
                         "source": "title",
                         "recommendations": [
                             {
                                 "title": d.get("title"),
-                                "authors": [a["name"] for a in d.get("authors", [])],
+                                "authors": [a.get("name") for a in d.get("authors", [])],
                                 "year": d.get("year"),
                                 "venue": d.get("venue"),
                                 "abstract": d.get("abstract"),
@@ -618,29 +678,42 @@ def external_recommendations(doc_id: str):
         semantic.ensure_loaded()
         matches = semantic.similar(doc_id, topk=5)
         docs = {d["id"]: d for d in list_docs()}
+
         recs = []
+
         for did, score in matches:
             if did == doc_id or did not in docs:
                 continue
+
             other = docs[did]
             other_meta = get_meta(did) or {}
+            other_final = other_meta.get("final") or {}
+
             recs.append({
-                "title": other_meta.get("title") or other["name"],
-                "authors": other_meta.get("authors", []),
-                "year": other_meta.get("year"),
-                "venue": other_meta.get("venue"),
-                "abstract": None,
-                "citations": None,
-                "url": None,
-                "meta": FullMetadata(**other_meta)
+                "title": other_final.get("title") or other["name"],
+                "authors": other_final.get("authors") or [],
+                "year": other_final.get("year"),
+                "venue": other_final.get("venue"),
+                "abstract": other_final.get("abstract") or other_final.get("summary"),
+                "citations": other_final.get("citationCount"),
+                "url": other_final.get("url"),
+                "score": float(score),
+                "meta": FullMetadata(**other_meta) if other_meta else None,
             })
+
         if recs:
-            return {"source": "local", "recommendations": recs}
+            return {
+                "source": "local",
+                "recommendations": recs
+            }
 
         raise HTTPException(status_code=404, detail="No recommendations found.")
+
+    except HTTPException:
+        raise
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.post("/api/reindex")
 def reindex():
