@@ -7,9 +7,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  overflow: hidden; /* 💀 kills global scrollbars */
-  background-color: #fdf8f4; /* soft neutral background */
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-color: #fdf8f4;
   color: #4a2f19;
   font-family: "Inter", sans-serif;
 }
