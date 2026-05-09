@@ -18,7 +18,7 @@ def process_pdf(file_path: str, max_summary_sentences: int = 5) -> dict:
     summary = textrankish_summary(text, max_sentences=max_summary_sentences)
 
     # Metadata enrichment
-    meta = enrich_from_text(text) or {}
+    meta = enrich_from_text(text, file_path) or {}
 
     return {
         "full_text": text,
