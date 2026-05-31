@@ -1,0 +1,9 @@
+The final SmartResearch technical report was submitted through the Moodle assessment portal before the Assignment 6 deadline.
+
+The PDF is not duplicated in this repository because its file size exceeds GitHub's browser-upload limit.
+
+A copy of the final technical report is available at:
+
+https://drive.google.com/drive/folders/1vRe07mN6fwySWmEPOQryw52scwAE245f?usp=sharing
+
+The Moodle submission represents the official evaluation copy.
