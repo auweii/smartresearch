@@ -1,15 +1,16 @@
-from PyPDF2 import PdfReader
+import fitz  # PyMuPDF
 
 def pdf_to_text(path: str) -> str:
     """
-    Extract selectable text directly from a PDF.
+    Extract selectable text directly from a PDF using PyMuPDF.
     If pages fail (encrypted / malformed), skip them gracefully.
     """
-    reader = PdfReader(path)
+    doc = fitz.open(path)
     chunks = []
-    for page in reader.pages:
+    for page in doc:
         try:
-            chunks.append(page.extract_text() or "")
+            chunks.append(page.get_text() or "")
         except Exception:
             continue
+    doc.close()
     return "\n".join(chunks).strip()

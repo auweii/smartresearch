@@ -1,4 +1,6 @@
 import re
+import requests
+from difflib import SequenceMatcher
 from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize
 import nltk
@@ -6,168 +8,187 @@ import os
 
 nltk.data.path.append(os.path.expanduser("~/.nltk_data"))
 
+# regex for detecting metadata, headers, and boilerplate lines
+_NOISE_PATTERNS = re.compile(
+    r'@|'
+    r'\d+\(\d+\)|'
+    r'\.{2,}|'
+    r'^\s*\d+\s*$|'
+    r'sveučilište|filozofski|'
+    r'©|creative commons|'
+    r'http[s]?://',
+    re.IGNORECASE
+)
+
+_PROSE_MIN_WORDS = 8
+
 
 def clean_summary_text(text: str) -> str:
     text = text.replace("￾", "")
     text = re.sub(r"-\s+", "", text)
     text = re.sub(r"\s+", " ", text).strip()
-
-    # common PDF extraction word breaks
-    replacements = {
-        "em pirical": "empirical",
-        "pro pose": "propose",
-        "cul tures": "cultures",
-        "misunderstand ings": "misunderstandings",
-        "T homas": "Thomas",
-        "A quinas": "Aquinas",
-    }
-
-    for bad, good in replacements.items():
-        text = text.replace(bad, good)
-
+    text = re.sub(r'\b\d{3}\b', '', text)
+    text = re.sub(r'\[[\d\s,]+\]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
     return text
 
+
+def deduplicate_lines(lines: list) -> list:
+    seen = set()
+    result = []
+    for line in lines:
+        normalized = re.sub(r'\d+', '', line.strip().lower())
+        normalized = re.sub(r'\s+', ' ', normalized).strip()
+        if normalized not in seen:
+            seen.add(normalized)
+            result.append(line)
+    return result
+
+
+def _is_noise(line: str) -> bool:
+    low = line.lower()
+    if _NOISE_PATTERNS.search(line):
+        return True
+    if line.isupper() and len(line.split()) <= 5:
+        return True
+    if line.startswith("©"):
+        return True
+    if line.endswith("...") or line.endswith("…"):
+        return True
+    if "creative commons" in low or "license" in low or "noncommercial" in low:
+        return True
+    return False
+
+
+def _fetch_semantic_abstract(doi: str) -> str:
+    if not doi:
+        return ""
+    try:
+        res = requests.get(
+            f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}",
+            params={"fields": "abstract"},
+            timeout=5,
+        )
+        if res.status_code == 200:
+            abstract = res.json().get("abstract") or ""
+            return abstract.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _truncate(text: str, max_sentences: int = 3) -> str:
+    sentences = sent_tokenize(text)
+    return " ".join(sentences[:max_sentences])
+
+
 def extract_abstract_summary(text: str) -> str:
-    """
-    Extract the real abstract/lead summary section if it exists.
-    Handles:
-    1. ABSTRACT ... keywords/introduction
-    2. No ABSTRACT heading, but lead abstract before Key words
-    3. No keywords, but lead abstract before epigraph/first body paragraph
-    """
     if not text or not text.strip():
         return ""
 
     clean = text.replace("\r", "\n")
-    first_part = clean[:5000]
+    clean = "\n".join(deduplicate_lines(clean.splitlines()))
 
-    # Case 1: normal ABSTRACT heading
+    # match explicit ABSTRACT section including spaced variants like A B S T R A C T
     pattern = re.compile(
-        r"\bABSTRACT\b\s*(.*?)(?=\b(Keywords|Keyword|Key words|Introduction|1\.?\s+Introduction)\b)",
+        r"\bA[\s]*B[\s]*S[\s]*T[\s]*R[\s]*A[\s]*C[\s]*T\b\s*"
+        r"(.*?)"
+        r"(?=\b(Keywords?|Key\s+words?|Introduction|1\.?\s+Introduction)\b)",
         re.IGNORECASE | re.DOTALL,
     )
 
-    match = pattern.search(first_part)
+    match = pattern.search(clean)
     if match:
         abstract = clean_summary_text(match.group(1))
         if len(abstract.split()) >= 40:
-            return abstract
+            return _truncate(abstract, max_sentences=5)
 
-    # Case 2: abstract before Key words / Keywords
-    key_match = re.search(
-        r"\b(Key words|Keywords|Keyword)\s*:",
-        first_part,
-        re.IGNORECASE,
-    )
+    # fallback: extract text before keywords/introduction marker
+    doc_len = len(clean)
+    search_window = clean[:max(doc_len // 4, 3000)]
+
+    key_match = re.search(r"\b(Key\s*words?|Keywords?)\s*:", search_window, re.IGNORECASE)
 
     if key_match:
-        before_marker = first_part[:key_match.start()]
+        before_marker = search_window[:key_match.start()]
     else:
-        # Case 3: no keyword marker. Stop before obvious body/epigraph start.
         stop_match = re.search(
-            r"\n\s*(I can think of no better expression|No one who is wise|1\.?\s+Introduction|Introduction)\b",
-            first_part,
+            r"\n\s*(1\.?\s+Introduction|Introduction)\b",
+            search_window,
             re.IGNORECASE,
         )
-        if stop_match:
-            before_marker = first_part[:stop_match.start()]
-        else:
-            before_marker = first_part[:2500]
+        before_marker = search_window[:stop_match.start()] if stop_match else search_window[:len(search_window) // 2]
 
-    lines = [line.strip() for line in before_marker.splitlines() if line.strip()]
+    lines = [l.strip() for l in before_marker.splitlines() if l.strip()]
+    lines = deduplicate_lines(lines)
+    lines = [l for l in lines if not _is_noise(l) and len(l.split()) > 3]
 
-    filtered = []
-    for line in lines:
-        low = line.lower()
+    if not lines:
+        return ""
 
-        if "@" in line:
-            continue
-        if "orcid" in low:
-            continue
-        if "doi" in low or "https://" in low or "http://" in low:
-            continue
-        if "creative commons" in low or "license" in low:
-            continue
-        if "downloaded from" in low:
-            continue
-        if "published under" in low:
-            continue
-        if "received" in low or "accepted" in low:
-            continue
-        if "issn" in low:
-            continue
-        if len(line.split()) <= 3:
-            continue
-        if line.isupper():
-            continue
-
-        # Skip known title/header style lines
-        if "philosophy in dialogue" in low:
-            continue
-        if "example of albert" in low:
-            continue
-        if "the life of freedom" in low:
-            continue
-        if "philosophy, the humanities" in low:
-            continue
-        if "thomas aquinas" in low and len(line.split()) < 12:
-            continue
-
-        filtered.append(line)
-
-    start_idx = 0
-    for i, line in enumerate(filtered):
-        words = line.split()
-
-        if len(words) >= 7:
-            letters = [c for c in line if c.isalpha()]
-            lower_letters = [c for c in letters if c.islower()]
-            lower_ratio = len(lower_letters) / max(len(letters), 1)
-
-            if lower_ratio > 0.55:
-                start_idx = i
-                break
-
-    candidate = " ".join(filtered[start_idx:])
-    candidate = clean_summary_text(candidate)
-
+    candidate = clean_summary_text(" ".join(lines))
     if len(candidate.split()) >= 40:
-        return candidate
+        return _truncate(candidate)
 
     return ""
 
-def textrankish_summary(text: str, max_sentences: int = 5) -> str:
-    """
-    A lightweight extractive summarizer inspired by TextRank.
-    First tries to use the real abstract section.
-    If no abstract is found, it falls back to sentence scoring.
-    """
-    abstract = extract_abstract_summary(text)
-    if abstract:
-        return abstract
 
-    sents = sent_tokenize(text)
+def _extract_body_text(text: str) -> str:
+    # find where body prose begins — first line with enough words and no noise
+    lines = text.splitlines()
+    body_start = 0
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if (
+            len(stripped.split()) >= _PROSE_MIN_WORDS
+            and not _is_noise(stripped)
+            and not stripped.endswith(":")
+        ):
+            body_start = i
+            break
+
+    return "\n".join(lines[body_start:])
+
+
+def textrankish_summary(text: str, max_sentences: int = 5, doi: str = None) -> str:
+    # prefer Semantic Scholar abstract when DOI is available
+    semantic_abstract = _fetch_semantic_abstract(doi) if doi else ""
+
+    local_abstract = extract_abstract_summary(text)
+
+    if semantic_abstract:
+        return _truncate(semantic_abstract)
+
+    if local_abstract:
+        return local_abstract
+
+    # fall back to TextRank scoring on body text
+    body_text = _extract_body_text(text)
+    sents = sent_tokenize(body_text)
+    sents = deduplicate_lines(sents)
+    sents = [s for s in sents if not _is_noise(s) and len(s.split()) >= 5]
+
+    if not sents:
+        return clean_summary_text(text[:500])
+
     if len(sents) <= max_sentences:
-        return clean_summary_text(text)
+        return clean_summary_text(" ".join(sents))
 
-    words = re.findall(r"[A-Za-z]{2,}", text.lower())
     sw = set(stopwords.words("english"))
+    words = re.findall(r"[A-Za-z]{2,}", body_text.lower())
     freq = {}
-
     for w in words:
         if w not in sw:
             freq[w] = freq.get(w, 0) + 1
 
-    scored = [
-        (
-            sum(
-                freq.get(w.lower(), 0)
-                for w in re.findall(r"[A-Za-z]{2,}", s)
-            ) / (len(s.split()) + 1),
-            s,
-        )
-        for s in sents
-    ]
+    # score by word frequency, penalise very short or very long sentences
+    scored = []
+    for s in sents:
+        s_words = re.findall(r"[A-Za-z]{2,}", s)
+        word_score = sum(freq.get(w.lower(), 0) for w in s_words) / (len(s_words) + 1)
+        length_penalty = 1.0 if 10 <= len(s_words) <= 40 else 0.5
+        scored.append((word_score * length_penalty, s))
 
     top = sorted(scored, key=lambda t: t[0], reverse=True)[:max_sentences]
     ordered = [s for _, s in sorted(top, key=lambda x: sents.index(x[1]))]

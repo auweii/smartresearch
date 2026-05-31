@@ -6,25 +6,23 @@ import { useNavigate } from "react-router-dom"
 
 const API_BASE = "http://127.0.0.1:8000"
 
+// pulls keywords out of the description string the backend sends
 function extractKeywords(cluster) {
-  // backend currently stuffs keywords into description like: "keywords: a, b, c"
   const desc = (cluster?.description || "").trim()
   const m = desc.match(/^keywords:\s*(.+)$/i)
   if (!m) return []
-  return m[1]
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
+  return m[1].split(",").map((s) => s.trim()).filter(Boolean)
 }
 
 export default function ClusterPage() {
   const [clusters, setClusters] = useState([])
-  const [modalCluster, setModalCluster] = useState(null)
+  const [modalCluster, setModalCluster] = useState(null) // which cluster modal is open
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("default")
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
+  // fetch clusters and docs on page load
   useEffect(() => {
     const load = async () => {
       setLoading(true)
@@ -37,13 +35,13 @@ export default function ClusterPage() {
         const rawClusters = Array.isArray(clustersRes.data) ? clustersRes.data : []
         const docs = Array.isArray(docsRes.data) ? docsRes.data : []
 
+        // build a map of doc id -> doc so we can look up papers quickly
         const docsById = new Map(docs.map((d) => [d.id, d]))
 
         const hydrated = rawClusters.map((c) => {
           const paperIds = Array.isArray(c.paper_ids) ? c.paper_ids : []
           const papers = paperIds.map((id) => docsById.get(id)).filter(Boolean)
           const keywords = extractKeywords(c)
-
           return {
             ...c,
             paper_ids: paperIds,
@@ -65,6 +63,7 @@ export default function ClusterPage() {
     load()
   }, [])
 
+  // filter and sort clusters based on search input and sort selection
   const filteredClusters = useMemo(() => {
     const term = searchTerm.toLowerCase().trim()
     return (clusters || [])
@@ -84,6 +83,8 @@ export default function ClusterPage() {
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-bronze-50 to-bronze-100/60 text-bronze-800 p-8">
       <div className="max-w-7xl mx-auto">
+
+        {/* top bar */}
         <div className="mb-8 flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
@@ -97,9 +98,10 @@ export default function ClusterPage() {
           Clustering
         </h1>
         <p className="text-center text-neutral-600 mb-8">
-          clusters are generated from your uploaded papers. keywords are pulled from the cluster’s tf-idf.
+          clusters are generated from your uploaded papers. keywords are pulled from the cluster's tf-idf.
         </p>
 
+        {/* search + sort bar */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <input
             type="text"
@@ -119,6 +121,7 @@ export default function ClusterPage() {
           </select>
         </div>
 
+        {/* cluster grid */}
         {loading ? (
           <Card className="p-8 text-center text-neutral-500">loading clusters…</Card>
         ) : filteredClusters.length > 0 ? (
@@ -133,6 +136,7 @@ export default function ClusterPage() {
                   {c.title || "untitled cluster"}
                 </h2>
 
+                {/* keywords — only shown once here, description block removed to avoid duplicate */}
                 {Array.isArray(c.keywords) && c.keywords.length > 0 ? (
                   <p className="text-sm text-neutral-700 line-clamp-2 mb-3">
                     keywords: {c.keywords.join(", ")}
@@ -143,15 +147,9 @@ export default function ClusterPage() {
                   </p>
                 )}
 
-                <p className="text-base font-semibold mb-1">
+                <p className="text-base font-semibold mb-4">
                   {c.count ?? 0} papers
                 </p>
-
-                {c.description ? (
-                  <p className="text-sm text-neutral-700 mb-4 line-clamp-2">
-                    {c.description}
-                  </p>
-                ) : null}
 
                 <button className="border border-bronze-700 text-bronze-700 hover:bg-bronze-700 hover:text-white font-medium text-sm rounded-md px-3 py-1 transition-all">
                   View Papers
@@ -166,16 +164,13 @@ export default function ClusterPage() {
         )}
       </div>
 
+      {/* cluster detail modal */}
       <Modal open={!!modalCluster} onClose={() => setModalCluster(null)} size="large">
         {modalCluster && (
           <div className="p-4 space-y-4">
             <h2 className="text-2xl font-bold">
               {modalCluster.title || "cluster details"}
             </h2>
-
-            {modalCluster.description ? (
-              <p className="text-neutral-700">{modalCluster.description}</p>
-            ) : null}
 
             <p className="text-neutral-600 text-sm">
               <strong>Top Keywords:</strong>{" "}
@@ -188,21 +183,7 @@ export default function ClusterPage() {
               <strong>Number of Papers:</strong> {modalCluster.count ?? 0}
             </p>
 
-            <div className="flex items-center gap-3 mb-3">
-              <input
-                type="text"
-                placeholder="Search papers"
-                className="flex-1 px-3 py-2 rounded-lg border border-neutral-300 text-sm"
-                disabled
-              />
-              <select
-                className="border border-neutral-300 rounded-lg px-3 py-2 text-sm text-neutral-700 bg-white w-[10rem]"
-                disabled
-              >
-                <option>Sort by: Date</option>
-              </select>
-            </div>
-
+            {/* paper list inside modal */}
             {Array.isArray(modalCluster.papers) && modalCluster.papers.length > 0 ? (
               <div className="space-y-3">
                 {modalCluster.papers.map((p, idx) => (
@@ -212,9 +193,12 @@ export default function ClusterPage() {
                   >
                     <div className="text-sm text-neutral-700 max-w-[80%]">
                       <p className="font-semibold">{p.name || `paper ${idx + 1}`}</p>
-                      {p.summary ? <p className="text-neutral-600 line-clamp-2">{p.summary}</p> : null}
+                      {p.summary ? (
+                        <p className="text-neutral-600 line-clamp-2">{p.summary}</p>
+                      ) : null}
                     </div>
 
+                    {/* view full summary button — navigates to /papers/:id */}
                     {p.id ? (
                       <button
                         onClick={() => navigate(`/papers/${p.id}`)}
@@ -242,6 +226,7 @@ export default function ClusterPage() {
         )}
       </Modal>
 
+      {/* next page button */}
       <button
         onClick={() => navigate("/export")}
         className="fixed bottom-6 right-6 bg-bronze-700 hover:bg-bronze-800 text-white font-semibold text-sm px-6 py-2 rounded-full shadow-lg transition-all"
@@ -251,4 +236,3 @@ export default function ClusterPage() {
     </div>
   )
 }
-
