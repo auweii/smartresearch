@@ -1,19 +1,33 @@
 # SmartResearch — Models
 
-This directory defines all **Pydantic models (schemas)** used by the SmartResearch backend.  
-These schemas handle request and response validation across the FastAPI endpoints, ensuring a consistent data structure between the backend and frontend.
+This directory contains the **Pydantic models (schemas)** defined for the SmartResearch backend.
+These schemas provide structured request and response formats for the FastAPI application, helping maintain consistent data handling between the backend and frontend.
 
 ---
 
 ## Overview
 
-Each file here provides data models for a specific backend domain.  
-They define the input/output formats used in:
-- **Upload & Storage**
-- **Summarization**
-- **Clustering**
-- **Search & Metadata Retrieval**
+The models are defined in `schemas.py` and cover:
 
-The models live in `schemas.py` and are imported throughout the app:
+* **Document Upload and Metadata**
+* **Text Retrieval**
+* **Keyword, Semantic, and Hybrid Search**
+* **Clustering**
+* **Extractive and Abstractive Summarisation**
+
+The schemas currently imported by the FastAPI application include:
+
 ```python
-from models.schemas import UploadResponse, SearchRequest, MetaResponse
+from models.schemas import (
+    FullMetadata,
+    UploadResponse,
+    DocMeta,
+    SearchRequest,
+    SearchResponse,
+    SearchHit,
+    MetaResponse,
+    TextResponse,
+)
+```
+
+Additional schemas for clustering and summarisation are also defined in `schemas.py` for future endpoint integration and extension.
