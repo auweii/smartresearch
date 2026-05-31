@@ -5,7 +5,7 @@ It serves as the final documentation archive for the completed SmartResearch pro
 
 ## Final Artefacts
 
-* `technical-report.pdf` — Final technical report documenting the completed system architecture, implementation, testing, and limitations.
+* technical-report-link.txt — Google Drive link to the final technical report submitted through moodle. the pdf is not duplicated in this repository due to github file-size constraints.
 * `user-manual.pdf` — Final user manual with setup instructions, feature guidance, and interface screenshots.
 * `contribution-table.pdf` — Final record of team-member contributions across the project lifecycle.
 * `chelsea-okan-individual-reflection-and-peer-assessment.pdf` — Individual reflection and peer assessment prepared for the final submission.
