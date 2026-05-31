@@ -127,10 +127,8 @@ Invoke-WebRequest -Uri http://127.0.0.1:8000/api/reindex -Method POST
 
 ---
 
-┌────────────────┐          ┌──────────────────────┐          ┌────────────────────┐
-│ React Frontend │  ←→      │   FastAPI Backend    │  ←→      │    Local Storage   │
-└────────────────┘          └──────────────────────┘          └────────────────────┘
-│                              │
-Upload UI              PDF Extraction, Metadata,
-                      Summarisation, Search,
-                      Clustering, Embeddings
+## System Overview
+
+**React Frontend** communicates with the **FastAPI Backend**, which reads and writes to **Local Storage**.
+
+The frontend handles user interaction and display. The backend handles PDF extraction, metadata enrichment, summarisation, search, clustering, and embedding generation. All outputs are stored locally on the file system.
