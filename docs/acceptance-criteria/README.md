@@ -30,3 +30,4 @@ They are maintained here to ensure version control, auditability, and traceabili
 
 Acceptance criteria are not duplicated in other project documents.  
 This folder is the single source of truth for all acceptance criteria.
+
