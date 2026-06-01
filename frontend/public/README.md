@@ -1,28 +1,31 @@
 # SmartResearch — Public Assets
 
-The **public/** directory contains all static files served directly by the Vite development server.  
-These files are not processed by the React build pipeline — they are copied as-is to the final build output.
+The `public/` directory contains static assets served directly by the Vite frontend.
+
+Files stored in this directory are copied into the final build output without being processed by the React bundling pipeline. They can be referenced using root-relative paths.
 
 ---
 
 ## Contents
 
-| File | Purpose |
-|------|----------|
-| `vite.svg` | Default Vite logo used as the current placeholder favicon or splash asset. |
+| File       | Purpose                                                              |
+| ---------- | -------------------------------------------------------------------- |
+| `vite.svg` | Default Vite logo currently used as the placeholder browser favicon. |
 
 ---
 
 ## Usage Notes
 
-- All files in `public/` are accessible via root-relative paths (e.g., `/vite.svg`).  
-- Static assets such as logos, manifest files, and favicons should live here.  
-- React should not `import` from this directory directly — use the public URL instead.
+* Files in `public/` are accessible through root-relative paths, such as `/vite.svg`.
+* Static assets such as favicons, logos, manifest files, and other files that do not require bundling may be stored here.
+* Assets from this directory should be referenced by their public URL rather than imported into React components.
+* The placeholder Vite favicon can be replaced with a SmartResearch-specific asset in a future interface update.
 
 ---
 
 ## Structure
-```markdown
+
+```text
 public/
 ├── vite.svg
 └── README.md
